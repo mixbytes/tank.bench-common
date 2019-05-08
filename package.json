@@ -1,0 +1,36 @@
+{
+  "name": "tank.bench-common",
+  "version": "0.0.1",
+  "licenses": [
+    {
+      "type": "Apache-2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mixbytes/tank.bench-common.git"
+  },
+  "engines": {
+    "node": ">=11.0.0"
+  },
+  "engineStrict": true,
+  "private": false,
+  "main": "dist/BenchRunner.js",
+  "types": "dist/BenchRunner.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf build",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@types/convict": "^4.2.1",
+    "@types/node": "^12.0.0",
+    "convict": "^4.4.1"
+  },
+  "devDependencies": {
+    "source-map-support": "^0.5.12"
+  }
+}
