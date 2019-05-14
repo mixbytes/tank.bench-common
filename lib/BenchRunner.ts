@@ -2,6 +2,7 @@ import Strings from "./resources/Strings";
 import convictConfig from "./config/convictConfig";
 import BlockchainModule from "./module/BlockchainModule";
 import Logger from "./resources/Logger";
+import * as fs from "fs";
 import WorkerWrapper from "./worker/WorkerWrapper";
 
 export default class BenchRunner {
@@ -11,19 +12,19 @@ export default class BenchRunner {
 
     constructor(blockchainModule: BlockchainModule) {
         this.blockchainModule = blockchainModule;
-        try {
-            convictConfig.loadFile(convictConfig.getProperties().configFile);
-            convictConfig.validate({allowed: 'strict'});
-        } catch (e) {
-            console.error(Strings.error.commonErrorMsg(
-                `${Strings.error.invalidConfigFile()}\n\n${e}`
-            ));
+        if (fs.existsSync(convictConfig.getProperties().configFile)) {
+            try {
+                convictConfig.loadFile(convictConfig.getProperties().configFile);
+                convictConfig.validate({allowed: 'strict'});
+            } catch (e) {
+                console.error(Strings.error.commonErrorMsg(
+                    `${Strings.error.invalidConfigFile()}\n\n${e}`
+                ));
+            }
         }
         this.commonConfig = convictConfig.getProperties();
         this.logger = new Logger(this.commonConfig);
     }
-
-    // private
 
     bench(): Promise<any> {
         this.logger.log(Strings.log.preparingToBenchmark());

@@ -1,2 +1,13 @@
 {
+  "log": {
+    "logLevel": 3,
+    "printErrorStack": true
+  },
+  "stopOn": {
+    "error": "stop",
+    "processedTransactions": 1000000
+  },
+  "threadsAmount": 8,
+  "maxActivePromises": 10,
+  "configFile": "./bench.config.json"
 }
