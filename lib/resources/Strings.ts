@@ -25,7 +25,7 @@ const Strings = {
 
     constants: {
         workerFilePath: () =>
-            `./lib/worker/BenchWorker.js`
+            `./node_modules/tank.bench-common/dist/worker/BenchWorker.js`
     }
 };
 
