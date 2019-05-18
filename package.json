@@ -1,6 +1,6 @@
 {
   "name": "tank.bench-common",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Common part for tank bench modules",
   "licenses": [
     {
@@ -17,8 +17,9 @@
   },
   "engineStrict": true,
   "private": false,
-  "main": "dist/BenchRunner.js",
-  "types": "dist/BenchRunner.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+
   "files": [
     "dist"
   ],

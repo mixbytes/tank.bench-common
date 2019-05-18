@@ -1,9 +1,9 @@
-import Strings from "./resources/Strings";
-import convictConfig from "./config/convictConfig";
-import BlockchainModule from "./module/BlockchainModule";
-import Logger from "./resources/Logger";
+import Strings from "../resources/Strings";
+import BlockchainModule from "../module/BlockchainModule";
+import Logger from "../resources/Logger";
 import * as fs from "fs";
-import WorkerWrapper from "./worker/WorkerWrapper";
+import WorkerWrapper from "../worker/WorkerWrapper";
+import getConvict from "../config/convictConfig";
 
 export default class BenchRunner {
     private readonly blockchainModule: BlockchainModule;
@@ -12,9 +12,11 @@ export default class BenchRunner {
 
     constructor(blockchainModule: BlockchainModule) {
         this.blockchainModule = blockchainModule;
-        if (fs.existsSync(convictConfig.getProperties().configFile)) {
+        let convictConfig = getConvict();
+        let convictFile = convictConfig.getProperties().configFile;
+        if (fs.existsSync(convictFile)) {
             try {
-                convictConfig.loadFile(convictConfig.getProperties().configFile);
+                convictConfig.loadFile(convictFile);
                 convictConfig.validate({allowed: 'strict'});
             } catch (e) {
                 console.error(Strings.error.commonErrorMsg(
@@ -26,6 +28,7 @@ export default class BenchRunner {
         this.logger = new Logger(this.commonConfig);
     }
 
+    // noinspection JSUnusedGlobalSymbols
     bench(): Promise<any> {
         this.logger.log(Strings.log.preparingToBenchmark());
         let prepareStep = this.blockchainModule.createPrepareStep(this.commonConfig, this.logger);
@@ -33,7 +36,8 @@ export default class BenchRunner {
             .then(() => prepareStep.prepare())
             .then(config => this.runBench(config))
             .catch(e => {
-                this.logger.error(Strings.error.commonErrorMsg(e.stack ? e.stack : e))
+                this.logger.error(Strings.error.commonErrorMsg(e.stack ? e.stack : e));
+                throw e;
             });
     }
 
