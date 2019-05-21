@@ -15,9 +15,6 @@ const Strings = {
     },
 
     constants: {
-        workerFilePath: () =>
-            `./node_modules/tank.bench-common/dist/worker/BenchWorker.js`,
-
         commonConfigFilePathArgs: () =>
             ["-cc=", "--common-config="],
 

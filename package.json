@@ -1,6 +1,6 @@
 {
   "name": "tank.bench-common",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "description": "Common part for tank bench modules",
   "license": "Apache-2.0",
   "repository": {
@@ -12,15 +12,15 @@
   },
   "engineStrict": true,
   "private": false,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/lib/index.js",
+  "types": "dist/lib/index.d.ts",
   "files": [
-    "dist"
+    "dist/lib/"
   ],
   "scripts": {
     "clean": "rm -rf build",
     "build": "tsc",
-    "test": "jest"
+    "test": "npm run build && jest"
   },
   "dependencies": {
     "convict": "^5.0.0",

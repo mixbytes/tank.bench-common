@@ -1,6 +1,6 @@
 import {Worker} from "worker_threads";
 import Logger from "../resources/Logger";
-import Strings from "../resources/Strings";
+import getWorkerFilePath from "./BenchWorker";
 
 export default class WorkerWrapper {
     private readonly benchConfig: any;
@@ -25,7 +25,7 @@ export default class WorkerWrapper {
         this.onCommittedTransaction = onCommittedTransaction;
         this.commonConfig = commonConfig;
 
-        this.worker = new Worker(Strings.constants.workerFilePath(), {
+        this.worker = new Worker(getWorkerFilePath(), {
             workerData: {
                 benchConfig: this.benchConfig,
                 commonConfig: this.commonConfig,

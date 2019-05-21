@@ -39,7 +39,7 @@ export default class Config {
         const moduleConvict = convict(blockchainModule.getConfigSchema());
         moduleConvict.loadFile(moduleConfigFilePath);
         moduleConvict.validate({allowed: "strict"});
-        this._commonConfig = moduleConvict.getProperties();
+        this._moduleConfig = moduleConvict.getProperties();
     }
 
     getCommonConfig(): any {

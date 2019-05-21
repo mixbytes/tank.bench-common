@@ -10,14 +10,17 @@
     "outDir": "./dist",
     "types": [
       "node",
-      "convict"
+      "convict",
+      "jest"
     ]
   },
   "include": [
-    "lib/**/*.ts"
+    "lib/**/*.ts",
+    "test/simple/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist/lib",
+    "dist/test"
   ]
 }
