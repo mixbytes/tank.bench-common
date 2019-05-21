@@ -16,7 +16,7 @@ export default class Config {
 
         process.argv.forEach(processArg => {
             Strings.constants.commonConfigFilePathArgs().forEach(arg => {
-                if (processArg.startsWith(processArg)) {
+                if (processArg.startsWith(arg)) {
                     commonConfigFilePath = processArg.substr(arg.length);
                 }
             });
@@ -24,7 +24,7 @@ export default class Config {
 
         process.argv.forEach(processArg => {
             Strings.constants.moduleConfigFilePathArgs().forEach(arg => {
-                if (processArg.startsWith(processArg)) {
+                if (processArg.startsWith(arg)) {
                     moduleConfigFilePath = processArg.substr(arg.length);
                 }
             });
