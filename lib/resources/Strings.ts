@@ -14,18 +14,21 @@ const Strings = {
             `Benchmark finished!`
     },
 
-    error: {
-
-        commonErrorMsg: (reason: any) =>
-            `ERROR! The app can't run anymore. Reason:\n${reason}`,
-
-        invalidConfigFile: () =>
-            `Invalid configuration file:`,
-    },
-
     constants: {
         workerFilePath: () =>
-            `./node_modules/tank.bench-common/dist/worker/BenchWorker.js`
+            `./node_modules/tank.bench-common/dist/worker/BenchWorker.js`,
+
+        commonConfigFilePathArgs: () =>
+            ["-cc=", "--common-config="],
+
+        moduleConfigFilePathArgs: () =>
+            ["-mc=", "--module-config="],
+
+        commonConfigFilePath: () =>
+            `./bench.config.json`,
+
+        moduleConfigFilePath: () =>
+            `./module.config.json`
     }
 };
 

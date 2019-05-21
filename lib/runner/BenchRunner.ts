@@ -1,47 +1,40 @@
 import Strings from "../resources/Strings";
 import BlockchainModule from "../module/BlockchainModule";
 import Logger from "../resources/Logger";
-import * as fs from "fs";
 import WorkerWrapper from "../worker/WorkerWrapper";
-import getConvict from "../config/convictConfig";
+import Config from "../config/Config";
 
 export default class BenchRunner {
     private readonly blockchainModule: BlockchainModule;
+    private readonly config: Config;
     private readonly commonConfig: any;
+    private readonly moduleConfig: any;
     private readonly logger: Logger;
 
     constructor(blockchainModule: BlockchainModule) {
         this.blockchainModule = blockchainModule;
-        let convictConfig = getConvict();
-        let convictFile = convictConfig.getProperties().configFile;
-        if (fs.existsSync(convictFile)) {
-            try {
-                convictConfig.loadFile(convictFile);
-                convictConfig.validate({allowed: 'strict'});
-            } catch (e) {
-                console.error(Strings.error.commonErrorMsg(
-                    `${Strings.error.invalidConfigFile()}\n\n${e}`
-                ));
-            }
-        }
-        this.commonConfig = convictConfig.getProperties();
+        this.config = new Config(blockchainModule);
+        this.commonConfig = this.config.getCommonConfig();
+        this.moduleConfig = this.config.getModuleConfig();
         this.logger = new Logger(this.commonConfig);
     }
 
     // noinspection JSUnusedGlobalSymbols
     bench(): Promise<any> {
         this.logger.log(Strings.log.preparingToBenchmark());
-        let prepareStep = this.blockchainModule.createPrepareStep(this.commonConfig, this.logger);
+
+        let prepareStep = this.blockchainModule
+            .createPrepareStep(this.commonConfig, this.moduleConfig, this.logger);
+
         return prepareStep.asyncConstruct()
             .then(() => prepareStep.prepare())
-            .then(config => this.runBench(config))
+            .then(benchConfig => this.runBench(benchConfig))
             .catch(e => {
-                this.logger.error(Strings.error.commonErrorMsg(e.stack ? e.stack : e));
                 throw e;
             });
     }
 
-    private runBench(config: any): Promise<any> {
+    private runBench(benchConfig: any): Promise<any> {
         this.logger.log(Strings.log.startingBenchmark(this.commonConfig.threadsAmount));
         let workers: WorkerWrapper[] = [];
         let resolved = false;
@@ -52,9 +45,12 @@ export default class BenchRunner {
             // Here not to exceed stdout event listeners
             Object.defineProperty(console, '_ignoreErrors', {value: false});
 
-            const onKeyPoint = () => {
-                proceededTransfers += 10;
-                this.logger.log(Strings.log.proceededNTransactions(proceededTransfers));
+            const onCommittedTransaction = () => {
+                proceededTransfers++;
+
+                if (proceededTransfers % this.commonConfig.log.keyPoints == 0)
+                    this.logger.log(Strings.log.proceededNTransactions(proceededTransfers));
+
                 if (this.commonConfig.stopOn.processedTransactions !== -1 && proceededTransfers >= this.commonConfig.stopOn.processedTransactions) {
                     if (!resolved) {
                         resolved = true;
@@ -74,9 +70,9 @@ export default class BenchRunner {
                 workers.push(new WorkerWrapper(
                     this.blockchainModule.getFileName(),
                     this.logger,
-                    config,
+                    benchConfig,
                     this.commonConfig,
-                    onKeyPoint,
+                    onCommittedTransaction,
                     onError
                 ));
             }

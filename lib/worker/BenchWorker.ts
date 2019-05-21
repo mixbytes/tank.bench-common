@@ -2,7 +2,7 @@ import {isMainThread, parentPort, threadId, workerData} from "worker_threads";
 import Logger from "../resources/Logger";
 import BenchStep from "../module/steps/BenchStep";
 
-const config = workerData.config;
+const benchConfig = workerData.benchConfig;
 const commonConfig = workerData.commonConfig;
 const blockchainModuleFileName = workerData.filename;
 
@@ -29,12 +29,10 @@ const startBenchmark = () => {
                     if (!benchRunning && waitingPromises === 0) {
                         resolve();
                     }
-                    if (transactionsProcessed % 10 === 0) {
-                        if (parentPort)
-                            parentPort.postMessage({
-                                method: "onKeyPoint",
-                            });
-                    }
+                    if (parentPort)
+                        parentPort.postMessage({
+                            method: "onCommitted",
+                        });
                     if (benchRunning) {
                         setTimeout(addTransaction, 0);
                     }
@@ -90,7 +88,7 @@ const run = () => {
         return;
     import(blockchainModuleFileName)
         .then(blockchainModule => {
-            benchStep = new blockchainModule.default().createBenchStep(config, new Logger(config));
+            benchStep = new blockchainModule.default().createBenchStep(benchConfig, new Logger(benchConfig));
         })
         .then(() => benchStep.asyncConstruct())
         .then(() => {
