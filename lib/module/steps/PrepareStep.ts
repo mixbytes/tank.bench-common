@@ -6,7 +6,8 @@ export default abstract class PrepareStep extends Step {
     protected commonConfig: any;
     protected moduleConfig: any;
 
-    protected constructor(commonConfig: any, moduleConfig: any, logger: Logger) {
+    // noinspection TypeScriptAbstractClassConstructorCanBeMadeProtected
+    constructor(commonConfig: any, moduleConfig: any, logger: Logger) {
         super(logger);
         this.commonConfig = commonConfig;
         this.moduleConfig = moduleConfig;

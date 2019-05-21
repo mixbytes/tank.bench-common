@@ -5,7 +5,8 @@ export default abstract class BenchStep extends Step {
 
     protected benchConfig: any;
 
-    protected constructor(benchConfig: any, logger: Logger) {
+    // noinspection TypeScriptAbstractClassConstructorCanBeMadeProtected
+    constructor(benchConfig: any, logger: Logger) {
         super(logger);
         this.benchConfig = benchConfig;
     }
