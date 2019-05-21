@@ -1,6 +1,7 @@
 import BlockchainModule from "../module/BlockchainModule";
 import Strings from "../resources/Strings";
-import CommonConfigTemplate from "./CommonConfigTemplate";
+import CommonConfigSchema from "./CommonConfigSchema";
+import * as convict from "convict";
 
 export default class Config {
     private readonly _commonConfig: any;
@@ -30,12 +31,12 @@ export default class Config {
             });
         });
 
-        const commonConvict = CommonConfigTemplate;
+        const commonConvict = convict(CommonConfigSchema);
         commonConvict.loadFile(commonConfigFilePath);
         commonConvict.validate({allowed: "strict"});
         this._commonConfig = commonConvict.getProperties();
 
-        const moduleConvict = blockchainModule.getConfigTemplate();
+        const moduleConvict = convict(blockchainModule.getConfigSchema());
         moduleConvict.loadFile(moduleConfigFilePath);
         moduleConvict.validate({allowed: "strict"});
         this._commonConfig = moduleConvict.getProperties();
