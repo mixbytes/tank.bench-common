@@ -1,11 +1,19 @@
 import Logger from "../resources/Logger";
 import BenchStep from "./steps/BenchStep";
 import PrepareStep from "./steps/PrepareStep";
+import * as convict from "convict";
 
-export default interface BlockchainModule {
-    createBenchStep(config: any, logger: Logger): BenchStep;
+export default abstract class BlockchainModule {
+    abstract createBenchStep(benchConfig: any, logger: Logger): BenchStep;
 
-    createPrepareStep(config: any, logger: Logger): PrepareStep;
+    abstract createPrepareStep(commonConfig: any, moduleConfig: any, logger: Logger): PrepareStep;
 
-    getFileName(): string;
+    abstract getConfigTemplate(): convict.Config<any>;
+
+    abstract getFileName(): string;
+
+    // noinspection JSMethodCanBeStatic
+    getDefaultConfigFilePath(): string | null {
+        return null;
+    }
 }

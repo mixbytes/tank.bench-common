@@ -7,7 +7,11 @@
     "declaration": true,
     "target": "esnext",
     "strict": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "types": [
+      "node",
+      "convict"
+    ]
   },
   "include": [
     "lib/**/*.ts"

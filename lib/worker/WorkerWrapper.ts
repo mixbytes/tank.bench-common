@@ -3,31 +3,31 @@ import Logger from "../resources/Logger";
 import Strings from "../resources/Strings";
 
 export default class WorkerWrapper {
-    private readonly config: any;
+    private readonly benchConfig: any;
     private readonly commonConfig: any;
     private readonly logger: Logger;
     private readonly worker: Worker;
 
-    private readonly onKeyPoint: () => any;
+    private readonly onCommittedTransaction: () => any;
     private readonly onError: (e: Error) => any;
 
     private stopCallback?: (...args: any) => any;
 
     constructor(blockchainModuleFileName: string,
                 logger: Logger,
-                config: any,
+                benchConfig: any,
                 commonConfig: any,
-                onKeyPoint: () => any,
+                onCommittedTransaction: () => any,
                 onError: (e: Error) => any) {
-        this.config = config;
+        this.benchConfig = benchConfig;
         this.logger = logger;
         this.onError = onError;
-        this.onKeyPoint = onKeyPoint;
+        this.onCommittedTransaction = onCommittedTransaction;
         this.commonConfig = commonConfig;
 
         this.worker = new Worker(Strings.constants.workerFilePath(), {
             workerData: {
-                config: this.config,
+                benchConfig: this.benchConfig,
                 commonConfig: this.commonConfig,
                 filename: blockchainModuleFileName
             }
@@ -36,8 +36,8 @@ export default class WorkerWrapper {
         this.worker.on('message', (msg) => {
             if (msg.method) {
                 switch (msg.method) {
-                    case "onKeyPoint":
-                        this.onKeyPoint();
+                    case "onCommitted":
+                        this.onCommittedTransaction();
                         break;
                     case "onError":
                         this.onError(msg.error);
