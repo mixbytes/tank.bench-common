@@ -1,7 +1,7 @@
 import Strings from "../resources/Strings";
 import BlockchainModule from "../module/BlockchainModule";
 import Logger from "../resources/Logger";
-import WorkerWrapper from "../worker/WorkerWrapper";
+import WorkersWrapper from "../worker/WorkersWrapper";
 import Config from "../config/Config";
 
 export default class BenchRunner {
@@ -19,73 +19,23 @@ export default class BenchRunner {
         this.logger = new Logger(this.commonConfig);
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    bench(): Promise<any> {
+    async bench() {
         this.logger.log(Strings.log.preparingToBenchmark());
 
         let prepareStep = this.blockchainModule
             .createPrepareStep(this.commonConfig, this.moduleConfig, this.logger);
 
-        return prepareStep.asyncConstruct()
-            .then(() => prepareStep.prepare())
-            .then(benchConfig => this.runBench(benchConfig))
-            .catch(e => {
-                throw e;
-            });
-    }
+        await prepareStep.asyncConstruct();
 
-    private runBench(benchConfig: any): Promise<any> {
+        let benchConfig = await prepareStep.prepare();
+
         this.logger.log(Strings.log.startingBenchmark(this.commonConfig.threadsAmount));
-        let workers: WorkerWrapper[] = [];
-        let resolved = false;
-        return new Promise<any>(resolve => {
-            let proceededTransfers = 0;
 
-            // HACK TO CONSOLE
-            // Here not to exceed stdout event listeners
-            Object.defineProperty(console, '_ignoreErrors', {value: false});
-
-            const onCommittedTransaction = () => {
-                proceededTransfers++;
-
-                if (proceededTransfers % this.commonConfig.log.keyPoints == 0)
-                    this.logger.log(Strings.log.proceededNTransactions(proceededTransfers));
-
-                if (this.commonConfig.stopOn.processedTransactions !== -1 && proceededTransfers >= this.commonConfig.stopOn.processedTransactions) {
-                    if (!resolved) {
-                        resolved = true;
-                        resolve();
-                    }
-                }
-            };
-
-            const onError = (e: any) => {
-                if (!resolved) {
-                    resolved = true;
-                    resolve(e);
-                }
-            };
-
-            for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-                workers.push(new WorkerWrapper(
-                    this.blockchainModule.getFileName(),
-                    this.logger,
-                    benchConfig,
-                    this.commonConfig,
-                    onCommittedTransaction,
-                    onError
-                ));
-            }
-        }).then(async e => {
-            await Promise.all(workers.map(w => {
-                    return w.stopBenchmark();
-                }
-            ));
-            if (e) {
-                throw e;
-            } else {
-                this.logger.log(Strings.log.benchmarkFinished());
-            }
-        });
+        await new WorkersWrapper(
+            this.blockchainModule.getFileName(),
+            this.logger,
+            benchConfig,
+            this.commonConfig,
+        ).bench();
     }
 }

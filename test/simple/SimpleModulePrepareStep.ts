@@ -1,9 +1,8 @@
 import {PrepareStep} from "../../lib";
 
 export default class SimpleModulePrepareStep extends PrepareStep {
-    async prepare(): Promise<any> {
-        return new Promise<any>(resolve => {
-            setTimeout(resolve, 1000);
-        });
+    async prepare() {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return {hello: "world"};
     }
 }
