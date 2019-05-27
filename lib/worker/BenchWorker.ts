@@ -10,9 +10,10 @@ const sleep = (time: number) => {
     return new Promise(resolve => setTimeout(resolve, time));
 };
 
-const TPS_DELAY = 100.0;
-const LOCAL_TPS_DELAY = 50.0;
-const LOCAL_TPS_MEASURES = 40.0;
+const TPS_NOTIFY_DELAY = 100.0;
+const LOCAL_TPS_DELAY = 20.0;
+const LOCAL_TPS_MEASURES = 50;
+const TPS_LIMITER_P_FACTOR = 0.15;
 
 class Bench {
     benchStep?: BenchStep;
@@ -24,6 +25,9 @@ class Bench {
     localTpsAlreadyMesured = 0;
     localTpsTransProcessedLast = 0;
     localTpsTransProcessed: number[] = [];
+
+    readonly tpsLimiterBuffer = workerData.tpsLimiterSharedBuffer;
+    readonly tpsLimiterArray = new Int32Array(this.tpsLimiterBuffer);
 
     readonly tpsBuffer = workerData.tpsSharedBuffer;
     readonly tpsArray = new Int32Array(this.tpsBuffer);
@@ -38,6 +42,8 @@ class Bench {
     readonly commonConfig = workerData.commonConfig;
     readonly blockchainModuleFileName = workerData.blockchainModuleFileName;
 
+    readonly targetTransactionTime = 1000.0 / this.commonConfig.tps;
+
     constructor() {
         parentPort!.on("message", msg => {
             if (msg.method === "stopBenchmark") {
@@ -47,15 +53,18 @@ class Bench {
             }
         });
         setInterval(() => {
-            Atomics.store(this.tpsArray, threadId - 1, Math.trunc(this.tps()))
-        }, TPS_DELAY);
+            Atomics.store(this.tpsArray, threadId - 1, Math.trunc(this.workerAvgTps()))
+        }, TPS_NOTIFY_DELAY);
+
+        this.localTpsTransProcessed.fill(0);
 
         setInterval(() => {
             this.localTpsTransProcessed.shift();
             this.localTpsTransProcessed[LOCAL_TPS_MEASURES - 1] = this.localTpsTransProcessedLast;
             this.localTpsTransProcessedLast = 0;
             this.localTpsAlreadyMesured++;
-            Atomics.store(this.localTpsArray, threadId - 1, Math.trunc(this.localTps()));
+            let workerLocalTps = this.workerLocalTps();
+            Atomics.store(this.localTpsArray, threadId - 1, workerLocalTps);
         }, LOCAL_TPS_DELAY);
     }
 
@@ -87,16 +96,15 @@ class Bench {
                 this.localTpsTransProcessedLast++;
                 Atomics.add(this.transProcessedArray, threadId - 1, 1);
 
-                let tps = this.globalTps();
+                let lastTrDuration = 1000.0 / this.globalLocalTps();
+                let durationDelta = this.targetTransactionTime - lastTrDuration;
 
-                let tts =
-                    tps * this.commonConfig.maxActivePromises * 4 +
-                    tps * this.commonConfig.threadsAmount * 2;
+                durationDelta = durationDelta * Math.log(Math.abs(durationDelta)) * TPS_LIMITER_P_FACTOR;
+                // console.log(durationDelta);
 
-                tts *= 3;
-                tts += (20 - this.commonConfig.tps) * 180;
+                Atomics.add(this.tpsLimiterArray, 0, durationDelta * 1000.0);
 
-                // console.log(tts);
+                let tts = Atomics.load(this.tpsLimiterArray, 0) / 1000.0;
                 await sleep(tts);
             }
 
@@ -104,16 +112,16 @@ class Bench {
         });
     }
 
-    private tps() {
-        return 1000000.0 * this.transactionsProcessed / (new Date().getTime() - this.benchStartTime);
+    private workerAvgTps() {
+        return this.transactionsProcessed / (new Date().getTime() - this.benchStartTime) * 1000000.0;
     }
 
-    private localTps() {
+    private workerLocalTps() {
         let measures = Math.min(this.localTpsAlreadyMesured, LOCAL_TPS_MEASURES);
-        return 1000000.0 * this.localTpsTransProcessed.reduce((a, v) => a + v, 0) / LOCAL_TPS_DELAY / measures;
+        return this.localTpsTransProcessed.reduce((a, v) => a + v, 0) / LOCAL_TPS_DELAY / measures * 1000000.0;
     }
 
-    private globalTps() {
+    private globalLocalTps() {
         let tps = 0;
         for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
             tps += Atomics.load(this.localTpsArray, i);

@@ -9,6 +9,9 @@ export default class WorkersWrapper {
     private readonly blockchainModuleFileName: string;
     private readonly workerFilePath: string;
 
+    private readonly tpsLimiterBuffer: SharedArrayBuffer;
+    private readonly tpsLimiterArray: Int32Array;
+
     private readonly tpsBuffer: SharedArrayBuffer;
     private readonly tpsArray: Int32Array;
 
@@ -42,6 +45,9 @@ export default class WorkersWrapper {
 
         this.workerFilePath = getWorkerFilePath();
 
+        this.tpsLimiterBuffer = new SharedArrayBuffer(4);
+        this.tpsLimiterArray = new Int32Array(this.tpsLimiterBuffer);
+
         this.tpsBuffer = new SharedArrayBuffer(4 * this.commonConfig.threadsAmount);
         this.tpsArray = new Int32Array(this.tpsBuffer);
 
@@ -51,6 +57,7 @@ export default class WorkersWrapper {
         this.transProcessedBuffer = new SharedArrayBuffer(4 * this.commonConfig.threadsAmount);
         this.transProcessedArray = new Int32Array(this.transProcessedBuffer);
 
+        this.tpsLimiterArray[0] = 0;
         for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
             this.transProcessedArray[i] = 0;
         }
@@ -120,7 +127,8 @@ export default class WorkersWrapper {
                 tpsSharedBuffer: this.tpsBuffer,
                 localTpsSharedBuffer: this.localTpsBuffer,
                 transProcessedSharedBuffer: this.transProcessedBuffer,
-                blockchainModuleFileName: this.blockchainModuleFileName
+                blockchainModuleFileName: this.blockchainModuleFileName,
+                tpsLimiterSharedBuffer: this.tpsLimiterBuffer,
             }
         });
 

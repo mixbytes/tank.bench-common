@@ -29,7 +29,7 @@ export default {
     },
     tps: {
         arg: 'common.tps',
-        format: "int",
+        format: Number,
         default: null,
         doc: "desired transactions per second"
     },

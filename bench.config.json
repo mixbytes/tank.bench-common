@@ -7,8 +7,8 @@
     "error": "print",
     "processedTransactions": 3000
   },
-  "tps": 40,
-  "threadsAmount": 8,
-  "maxActivePromises": 5,
-  "promisesStartDelay": 200
+  "tps": 42,
+  "threadsAmount": 6,
+  "maxActivePromises": 6,
+  "promisesStartDelay": 100
 }
