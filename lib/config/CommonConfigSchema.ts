@@ -27,6 +27,12 @@ export default {
             doc: "Stop if achieved this amount of transactions. WARNING: some additional transactions may be processed."
         }
     },
+    tps: {
+        arg: 'common.tps',
+        format: Number,
+        default: null,
+        doc: "desired transactions per second"
+    },
     threadsAmount: {
         arg: 'common.threadsAmount',
         format: "int",
@@ -38,5 +44,11 @@ export default {
         format: "int",
         default: null,
         doc: "amount of threads to perform transfer transactions"
+    },
+    promisesStartDelay: {
+        arg: 'common.promisesStartDelay',
+        format: "int",
+        default: null,
+        doc: "time to wait before starting new promise. Used to get smoother performance."
     }
 };

@@ -6,119 +6,152 @@ export default function getWorkerFilePath() {
     return __filename;
 }
 
-if (!isMainThread) {
-    const benchConfig = workerData.benchConfig;
-    const commonConfig = workerData.commonConfig;
-    const blockchainModuleFileName = workerData.filename;
+const sleep = (time: number) => {
+    return new Promise(resolve => setTimeout(resolve, time));
+};
 
-    let benchStep: BenchStep;
-    let benchRunning = false;
-    let transactionsStarted = 0;
-    let transactionsProcessed = 0;
-    let waitingPromises = 0;
+const TPS_NOTIFY_DELAY = 100.0;
+const LOCAL_TPS_DELAY = 20.0;
+const LOCAL_TPS_MEASURES = 50;
+const TPS_LIMITER_P_FACTOR = 0.15;
 
-    const startBenchmark = () => {
-        new Promise(resolve => {
-            benchRunning = true;
+class Bench {
+    benchStep?: BenchStep;
+    benchRunning = false;
+    transactionsStarted = 0;
+    transactionsProcessed = 0;
+    benchStartTime = new Date().getTime();
 
-            const addTransaction = () => {
-                if (!benchRunning)
-                    return;
-                let key = `${threadId}-${transactionsStarted}`;
-                transactionsStarted++;
-                waitingPromises++;
-                benchStep.commitBenchmarkTransaction(key)
-                    .then(() => {
-                        transactionsProcessed++;
-                        waitingPromises--;
-                        if (parentPort)
-                            parentPort.postMessage({
-                                method: "onCommitted",
-                            });
-                        if (!benchRunning && waitingPromises === 0) {
-                            resolve();
-                            return;
-                        }
-                        if (benchRunning) {
-                            setTimeout(addTransaction, 0);
-                        }
-                    })
-                    .catch(e => {
-                        waitingPromises--;
-                        let err = null;
-                        if (e) {
-                            err = e.stack ? e.stack : e;
-                        } else
-                            err = "Undefined error";
-                        switch (commonConfig.stopOn.error) {
-                            case "print":
-                                console.error(err);
-                                if (benchRunning) {
-                                    setTimeout(addTransaction, 0);
-                                }
-                                break;
-                            case "stop":
-                                if (parentPort)
-                                    parentPort.postMessage({method: "onError", error: err});
-                                break;
-                        }
-                        if (!benchRunning && waitingPromises === 0) {
-                            resolve();
-                        }
-                    });
-            };
-            for (let i = 0; i < commonConfig.maxActivePromises; i++) {
-                addTransaction();
-            }
-        }).then(() => {
-            if (!parentPort)
-                return;
-            parentPort.postMessage({
-                method: "stopBenchmark",
-            });
-        });
-    };
+    localTpsAlreadyMesured = 0;
+    localTpsTransProcessedLast = 0;
+    localTpsTransProcessed: number[] = [];
 
-    const stopBenchmark = () => {
-        benchRunning = false;
-        if (waitingPromises === 0 && parentPort)
-            parentPort.postMessage({
-                method: "stopBenchmark",
-            });
-    };
+    readonly tpsLimiterBuffer = workerData.tpsLimiterSharedBuffer;
+    readonly tpsLimiterArray = new Int32Array(this.tpsLimiterBuffer);
 
-    const run = () => {
-        if (isMainThread)
-            return;
-        if (!parentPort)
-            return;
-        import(blockchainModuleFileName)
-            .then(blockchainModule => {
-                benchStep = new blockchainModule.default().createBenchStep(benchConfig, new Logger(commonConfig));
-            })
-            .then(() => benchStep.asyncConstruct())
-            .then(() => {
-                if (!parentPort)
-                    return;
-                parentPort.postMessage({method: "startBenchmark"});
-                startBenchmark();
-            })
-            .catch((e) => {
-                if (!parentPort)
-                    return;
-                parentPort.postMessage({method: "onError", error: e});
-            });
+    readonly tpsBuffer = workerData.tpsSharedBuffer;
+    readonly tpsArray = new Int32Array(this.tpsBuffer);
 
+    readonly localTpsBuffer = workerData.localTpsSharedBuffer;
+    readonly localTpsArray = new Int32Array(this.localTpsBuffer);
 
-        parentPort.on("message", msg => {
+    readonly transProcessedBuffer = workerData.transProcessedSharedBuffer;
+    readonly transProcessedArray = new Int32Array(this.transProcessedBuffer);
+
+    readonly benchConfig = workerData.benchConfig;
+    readonly commonConfig = workerData.commonConfig;
+    readonly blockchainModuleFileName = workerData.blockchainModuleFileName;
+
+    readonly targetTransactionTime = 1000.0 / this.commonConfig.tps;
+
+    constructor() {
+        parentPort!.on("message", msg => {
             if (msg.method === "stopBenchmark") {
-                return stopBenchmark();
+                this.stopBench();
             } else {
                 throw new Error("Unknown method");
             }
         });
-    };
+        setInterval(() => {
+            Atomics.store(this.tpsArray, threadId - 1, Math.trunc(this.workerAvgTps()))
+        }, TPS_NOTIFY_DELAY);
 
+        this.localTpsTransProcessed.fill(0);
 
-    run();
+        setInterval(() => {
+            this.localTpsTransProcessed.shift();
+            this.localTpsTransProcessed[LOCAL_TPS_MEASURES - 1] = this.localTpsTransProcessedLast;
+            this.localTpsTransProcessedLast = 0;
+            this.localTpsAlreadyMesured++;
+            let workerLocalTps = this.workerLocalTps();
+            Atomics.store(this.localTpsArray, threadId - 1, workerLocalTps);
+        }, LOCAL_TPS_DELAY);
+    }
+
+    async startBench() {
+        let blockchainModule = await import(this.blockchainModuleFileName);
+        this.benchStep = new blockchainModule.default()
+            .createBenchStep(this.benchConfig, new Logger(this.commonConfig));
+
+        await this.benchStep!.asyncConstruct();
+        parentPort!.postMessage({method: "onStartBenchmark"});
+
+        await this.bench();
+    }
+
+    private createBenchPromise() {
+        return new Promise(async resolve => {
+            while (this.benchRunning) {
+                this.transactionsStarted++;
+                let key = `${threadId}-${this.transactionsStarted}`;
+                try {
+                    await this.benchStep!.commitBenchmarkTransaction(key);
+                } catch (e) {
+                    if (this.commonConfig.stopOn.error === "print")
+                        console.error(e ? (e.stack ? e.stack : e) : "");
+                    if (this.commonConfig.stopOn.error === "stop")
+                        throw e;
+                }
+                this.transactionsProcessed++;
+                this.localTpsTransProcessedLast++;
+                Atomics.add(this.transProcessedArray, threadId - 1, 1);
+
+                let lastTrDuration = 1000.0 / this.globalLocalTps();
+                let durationDelta = this.targetTransactionTime - lastTrDuration;
+
+                durationDelta = durationDelta * Math.log(Math.abs(durationDelta)) * TPS_LIMITER_P_FACTOR;
+                // console.log(durationDelta);
+
+                Atomics.add(this.tpsLimiterArray, 0, durationDelta * 1000.0);
+
+                let tts = Atomics.load(this.tpsLimiterArray, 0) / 1000.0;
+                await sleep(tts);
+            }
+
+            resolve();
+        });
+    }
+
+    private workerAvgTps() {
+        return this.transactionsProcessed / (new Date().getTime() - this.benchStartTime) * 1000000.0;
+    }
+
+    private workerLocalTps() {
+        let measures = Math.min(this.localTpsAlreadyMesured, LOCAL_TPS_MEASURES);
+        return this.localTpsTransProcessed.reduce((a, v) => a + v, 0) / LOCAL_TPS_DELAY / measures * 1000000.0;
+    }
+
+    private globalLocalTps() {
+        let tps = 0;
+        for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+            tps += Atomics.load(this.localTpsArray, i);
+        }
+        return tps / 1000.0;
+    }
+
+    private async bench() {
+        this.benchRunning = true;
+        this.benchStartTime = new Date().getTime();
+
+        let promises = [];
+        for (let i = 0; i < this.commonConfig.maxActivePromises; i++) {
+            promises.push(this.createBenchPromise());
+            await sleep(this.commonConfig.promisesStartDelay);
+        }
+        await Promise.all(promises);
+    }
+
+    private stopBench() {
+        this.benchRunning = false;
+    }
+}
+
+if (!isMainThread) {
+    new Bench().startBench()
+        .then(() => {
+            parentPort!.postMessage({method: "onStopBenchmark"});
+        })
+        .catch(e => {
+            parentPort!.postMessage({method: "onError", error: e});
+        });
 }
