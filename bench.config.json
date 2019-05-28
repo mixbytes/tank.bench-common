@@ -10,5 +10,6 @@
   "tps": 42,
   "threadsAmount": 6,
   "maxActivePromises": 6,
-  "promisesStartDelay": 100
+  "promisesStartDelay": 100,
+  "localTpsMeasureTime": 2000
 }

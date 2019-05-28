@@ -50,5 +50,11 @@ export default {
         format: "int",
         default: null,
         doc: "time to wait before starting new promise. Used to get smoother performance."
+    },
+    localTpsMeasureTime: {
+        arg: 'common.localTpsMeasureTime',
+        format: Number,
+        default: null,
+        doc: "time used to measure local tps"
     }
 };

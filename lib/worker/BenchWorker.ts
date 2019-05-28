@@ -11,7 +11,6 @@ const sleep = (time: number) => {
 };
 
 const TPS_NOTIFY_DELAY = 100.0;
-const LOCAL_TPS_DELAY = 20.0;
 const LOCAL_TPS_MEASURES = 50;
 const TPS_LIMITER_P_FACTOR = 0.15;
 
@@ -43,6 +42,8 @@ class Bench {
     readonly blockchainModuleFileName = workerData.blockchainModuleFileName;
 
     readonly targetTransactionTime = 1000.0 / this.commonConfig.tps;
+    readonly tpsMeasuresDelay = this.commonConfig.localTpsMeasureTime;
+    readonly tpsMeasuresUpdate = this.tpsMeasuresDelay / LOCAL_TPS_MEASURES;
 
     constructor() {
         parentPort!.on("message", msg => {
@@ -65,7 +66,7 @@ class Bench {
             this.localTpsAlreadyMesured++;
             let workerLocalTps = this.workerLocalTps();
             Atomics.store(this.localTpsArray, threadId - 1, workerLocalTps);
-        }, LOCAL_TPS_DELAY);
+        }, this.tpsMeasuresUpdate);
     }
 
     async startBench() {
@@ -118,7 +119,7 @@ class Bench {
 
     private workerLocalTps() {
         let measures = Math.min(this.localTpsAlreadyMesured, LOCAL_TPS_MEASURES);
-        return this.localTpsTransProcessed.reduce((a, v) => a + v, 0) / LOCAL_TPS_DELAY / measures * 1000000.0;
+        return this.localTpsTransProcessed.reduce((a, v) => a + v, 0) / this.tpsMeasuresUpdate / measures * 1000000.0;
     }
 
     private globalLocalTps() {
