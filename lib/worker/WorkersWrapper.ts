@@ -6,6 +6,7 @@ import PrometheusPusher from "../metrics/PrometheusPusher";
 const FINISH_CHECKER_INTERVAL = 100;
 const PROMETHEUS_UPDATE_INTERVAL = 200;
 const LOGGER_INTERVAL = 500;
+const LAST_TRXS_AMOUNT_FOR_LOCAL_TPS = 20;
 
 export default class WorkersWrapper {
     private readonly benchConfig: any;
@@ -16,6 +17,8 @@ export default class WorkersWrapper {
     private readonly prometheusPusher?: PrometheusPusher;
 
     private lastPrometheusTrxs = 0;
+    private processedTransactions = 0;
+    private readonly trxsEndTimes: number[];
 
     private readonly sharedAvgTpsBuffer: SharedArrayBuffer;
     private readonly sharedAvgTpsArray: Int32Array;
@@ -58,6 +61,8 @@ export default class WorkersWrapper {
         this.sharedTransProcessedArray.fill(0);
 
         this.workers = [];
+
+        this.trxsEndTimes = new Array(LAST_TRXS_AMOUNT_FOR_LOCAL_TPS).fill(0);
     }
 
     async bench() {
@@ -80,8 +85,9 @@ export default class WorkersWrapper {
         else
             console.log("Benchmark finished successfully");
 
-        console.log(`Total processed: ${this.calcProcessed()}`);
-        console.log(`Avg tps: ${this.calcAvgTps()}`);
+        console.log(`Total processed: ${this.processedTransactions}`);
+        console.log(`Local tps: ${this.calcLocalTps()}`);
+        console.log(`Avg   tps: ${this.calcAvgTps()}`);
         console.log("");
 
         if (this.benchError)
@@ -111,6 +117,11 @@ export default class WorkersWrapper {
                 this.stopBench();
                 break;
             case "onTransaction":
+                this.trxsEndTimes.shift();
+                this.trxsEndTimes[LAST_TRXS_AMOUNT_FOR_LOCAL_TPS - 1] = new Date().getTime();
+
+                this.processedTransactions++;
+
                 if (this.prometheusPusher) {
                     const respCode = message.respCode;
                     const trDuration = message.trDuration;
@@ -152,14 +163,6 @@ export default class WorkersWrapper {
         });
     }
 
-    private calcProcessed(): number {
-        let processed = 0;
-        for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-            processed += Atomics.load(this.sharedTransProcessedArray, i);
-        }
-        return processed;
-    }
-
     private calcAvgTps(): number {
         let tps = 0;
         for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
@@ -168,11 +171,16 @@ export default class WorkersWrapper {
         return tps / 100_000.0;
     }
 
+    private calcLocalTps(): number {
+        return Math.min(LAST_TRXS_AMOUNT_FOR_LOCAL_TPS, this.processedTransactions)
+            / (new Date().getTime() - this.trxsEndTimes[0]) * 1000;
+    }
+
     private startBench() {
         if (this.prometheusPusher) {
             this.prometheusPusher.start();
             setInterval(() => {
-                const processed = this.calcProcessed();
+                const processed = this.processedTransactions;
                 this.prometheusPusher!.addProcessedTransactions(processed - this.lastPrometheusTrxs);
 
                 this.prometheusPusher!.setAvgTps(this.calcAvgTps());
@@ -187,15 +195,16 @@ export default class WorkersWrapper {
         }
 
         this.stopIfProcessedInterval = setInterval(() => {
-            if (this.calcProcessed() >= this.commonConfig.stopOn.processedTransactions) {
+            if (this.processedTransactions >= this.commonConfig.stopOn.processedTransactions) {
                 clearInterval(this.stopIfProcessedInterval);
                 this.stopBench();
             }
         }, FINISH_CHECKER_INTERVAL);
 
         this.logInterval = setInterval(() => {
-            console.log(`processed: ${this.calcProcessed()}`);
-            console.log(`avg tps: ${this.calcAvgTps()}`);
+            console.log(`processed: ${this.processedTransactions}`);
+            console.log(`local tps: ${this.calcLocalTps()}`);
+            console.log(`avg   tps: ${this.calcAvgTps()}`);
             console.log("");
         }, LOGGER_INTERVAL);
     }

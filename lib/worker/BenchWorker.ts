@@ -12,8 +12,8 @@ const sleep = (time: number) => {
 
 const SPEEDUP_ON_PROMISES_LIMIT_EXCEED = 4.0;
 const MAIN_THREAD_COMMUNICATION_DELAY = 50;
-const SLEEP_COEF_LEARNING_FACTOR = 0.0024;
-const SLEEP_COEF_LEARNING_MAX = 0.2;
+// const SLEEP_COEF_LEARNING_FACTOR = 0.0024;
+// const SLEEP_COEF_LEARNING_MAX = 0.2;
 
 class Bench {
     benchStep?: BenchStep;
@@ -112,16 +112,17 @@ class Bench {
     }
 
     private async tplSleep(speedUp = false) {
-        let tpsDiff = this.workerAvgTps() / 100_000.0 - this.commonConfig.tps / this.commonConfig.threadsAmount;
-
-        if (Math.abs(tpsDiff) > SLEEP_COEF_LEARNING_MAX) {
-            if (tpsDiff > 0)
-                tpsDiff = SLEEP_COEF_LEARNING_MAX;
-            else
-                tpsDiff = -SLEEP_COEF_LEARNING_MAX
-        }
-
-        this.sleepCoef += tpsDiff * SLEEP_COEF_LEARNING_FACTOR;
+        // TODO: check if this code is suitable on real data
+        // let tpsDiff = this.workerAvgTps() / 100_000.0 - this.commonConfig.tps / this.commonConfig.threadsAmount;
+        //
+        // if (Math.abs(tpsDiff) > SLEEP_COEF_LEARNING_MAX) {
+        //     if (tpsDiff > 0)
+        //         tpsDiff = SLEEP_COEF_LEARNING_MAX;
+        //     else
+        //         tpsDiff = -SLEEP_COEF_LEARNING_MAX
+        // }
+        //
+        // this.sleepCoef += tpsDiff * SLEEP_COEF_LEARNING_FACTOR;
 
         let tts = this.targetThreadTransactionTime * this.sleepCoef;
         if (speedUp)
