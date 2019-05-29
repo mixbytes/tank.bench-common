@@ -22,7 +22,7 @@ class Bench {
     transactionsProcessed = 0;
     benchStartTime = new Date().getTime();
 
-    activePromises: boolean[] = [];
+    activePromises: number[] = [];
     benchError: any;
     sleepCoef = 1;
 
@@ -48,7 +48,7 @@ class Bench {
             }
         });
 
-        this.activePromises = new Array(this.commonConfig.maxActivePromises).fill(false);
+        this.activePromises = new Array(this.commonConfig.maxActivePromises).fill(0);
     }
 
     async startBench() {
@@ -71,8 +71,8 @@ class Bench {
         await this.transactionsPushLoop();
     }
 
-    private async createBenchPromise(idInPromisesArray: number) {
-        this.activePromises[idInPromisesArray] = true;
+    private async commitBenchTransaction(idInPromisesArray: number) {
+        this.activePromises[idInPromisesArray] = 1;
 
         const trStartTime = new Date().getTime();
 
@@ -104,7 +104,7 @@ class Bench {
             trDuration
         });
 
-        this.activePromises[idInPromisesArray] = false;
+        this.activePromises[idInPromisesArray] = 0;
     }
 
     private workerAvgTps() {
@@ -133,14 +133,14 @@ class Bench {
 
     private async transactionsPushLoop() {
         while (this.benchRunning) {
-            const freePromisePlace = this.activePromises.findIndex((active) => !active);
+            const freePromisePlace = this.activePromises.findIndex(active => active === 0);
             if (freePromisePlace === -1) {
                 await this.tplSleep(true);
                 continue;
             }
 
             // noinspection JSIgnoredPromiseFromCall
-            this.createBenchPromise(freePromisePlace);
+            this.commitBenchTransaction(freePromisePlace);
 
             await this.tplSleep(false);
         }
