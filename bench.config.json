@@ -1,15 +1,27 @@
 {
-  "log": {
-    "logLevel": 3,
-    "keyPoints": 10
-  },
+  "logLevel": 3,
   "stopOn": {
-    "error": "print",
+    "error": "no",
     "processedTransactions": 3000
   },
-  "tps": 42,
-  "threadsAmount": 6,
-  "maxActivePromises": 6,
-  "promisesStartDelay": 100,
-  "localTpsMeasureTime": 2000
+  "prometheusTelemetry": {
+    "enable": true,
+    "url": "http://127.0.0.1:9091",
+    "user": "admin",
+    "password": "admin",
+    "respCodeBuckets": [
+      200,
+      500
+    ],
+    "trxsDurationBuckets": [
+      10,
+      50,
+      100,
+      200,
+      500
+    ]
+  },
+  "tps": 123.4,
+  "threadsAmount": 8,
+  "maxActivePromises": 6
 }

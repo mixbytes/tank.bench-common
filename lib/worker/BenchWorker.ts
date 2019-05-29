@@ -10,9 +10,10 @@ const sleep = (time: number) => {
     return new Promise(resolve => setTimeout(resolve, time));
 };
 
-const TPS_NOTIFY_DELAY = 100.0;
-const LOCAL_TPS_MEASURES = 50;
-const TPS_LIMITER_P_FACTOR = 0.15;
+const SPEEDUP_ON_PROMISES_LIMIT_EXCEED = 4.0;
+const MAIN_THREAD_COMMUNICATION_DELAY = 50;
+const SLEEP_COEF_LEARNING_FACTOR = 0.0024;
+const SLEEP_COEF_LEARNING_MAX = 0.2;
 
 class Bench {
     benchStep?: BenchStep;
@@ -21,52 +22,33 @@ class Bench {
     transactionsProcessed = 0;
     benchStartTime = new Date().getTime();
 
-    localTpsAlreadyMesured = 0;
-    localTpsTransProcessedLast = 0;
-    localTpsTransProcessed: number[] = [];
+    activePromises: boolean[] = [];
+    benchError: any;
+    sleepCoef = 1;
 
-    readonly tpsLimiterBuffer = workerData.tpsLimiterSharedBuffer;
-    readonly tpsLimiterArray = new Int32Array(this.tpsLimiterBuffer);
+    readonly sharedAvgTpsBuffer = workerData.sharedAvgTpsBuffer;
+    readonly sharedAvgTpsArray = new Int32Array(this.sharedAvgTpsBuffer);
 
-    readonly tpsBuffer = workerData.tpsSharedBuffer;
-    readonly tpsArray = new Int32Array(this.tpsBuffer);
-
-    readonly localTpsBuffer = workerData.localTpsSharedBuffer;
-    readonly localTpsArray = new Int32Array(this.localTpsBuffer);
-
-    readonly transProcessedBuffer = workerData.transProcessedSharedBuffer;
-    readonly transProcessedArray = new Int32Array(this.transProcessedBuffer);
+    readonly sharedTransProcessedBuffer = workerData.sharedTransProcessedBuffer;
+    readonly sharedTransProcessedArray = new Int32Array(this.sharedTransProcessedBuffer);
 
     readonly benchConfig = workerData.benchConfig;
     readonly commonConfig = workerData.commonConfig;
     readonly blockchainModuleFileName = workerData.blockchainModuleFileName;
 
     readonly targetTransactionTime = 1000.0 / this.commonConfig.tps;
-    readonly tpsMeasuresDelay = this.commonConfig.localTpsMeasureTime;
-    readonly tpsMeasuresUpdate = this.tpsMeasuresDelay / LOCAL_TPS_MEASURES;
+    readonly targetThreadTransactionTime = this.targetTransactionTime * this.commonConfig.threadsAmount;
 
     constructor() {
         parentPort!.on("message", msg => {
             if (msg.method === "stopBenchmark") {
-                this.stopBench();
+                this.benchRunning = false;
             } else {
                 throw new Error("Unknown method");
             }
         });
-        setInterval(() => {
-            Atomics.store(this.tpsArray, threadId - 1, Math.trunc(this.workerAvgTps()))
-        }, TPS_NOTIFY_DELAY);
 
-        this.localTpsTransProcessed.fill(0);
-
-        setInterval(() => {
-            this.localTpsTransProcessed.shift();
-            this.localTpsTransProcessed[LOCAL_TPS_MEASURES - 1] = this.localTpsTransProcessedLast;
-            this.localTpsTransProcessedLast = 0;
-            this.localTpsAlreadyMesured++;
-            let workerLocalTps = this.workerLocalTps();
-            Atomics.store(this.localTpsArray, threadId - 1, workerLocalTps);
-        }, this.tpsMeasuresUpdate);
+        this.activePromises = new Array(this.commonConfig.maxActivePromises).fill(false);
     }
 
     async startBench() {
@@ -77,73 +59,93 @@ class Bench {
         await this.benchStep!.asyncConstruct();
         parentPort!.postMessage({method: "onStartBenchmark"});
 
-        await this.bench();
-    }
-
-    private createBenchPromise() {
-        return new Promise(async resolve => {
-            while (this.benchRunning) {
-                this.transactionsStarted++;
-                let key = `${threadId}-${this.transactionsStarted}`;
-                try {
-                    await this.benchStep!.commitBenchmarkTransaction(key);
-                } catch (e) {
-                    if (this.commonConfig.stopOn.error === "print")
-                        console.error(e ? (e.stack ? e.stack : e) : "");
-                    if (this.commonConfig.stopOn.error === "stop")
-                        throw e;
-                }
-                this.transactionsProcessed++;
-                this.localTpsTransProcessedLast++;
-                Atomics.add(this.transProcessedArray, threadId - 1, 1);
-
-                let lastTrDuration = 1000.0 / this.globalLocalTps();
-                let durationDelta = this.targetTransactionTime - lastTrDuration;
-
-                durationDelta = durationDelta * Math.log(Math.abs(durationDelta)) * TPS_LIMITER_P_FACTOR;
-                // console.log(durationDelta);
-
-                Atomics.add(this.tpsLimiterArray, 0, durationDelta * 1000.0);
-
-                let tts = Atomics.load(this.tpsLimiterArray, 0) / 1000.0;
-                await sleep(tts);
-            }
-
-            resolve();
-        });
-    }
-
-    private workerAvgTps() {
-        return this.transactionsProcessed / (new Date().getTime() - this.benchStartTime) * 1000000.0;
-    }
-
-    private workerLocalTps() {
-        let measures = Math.min(this.localTpsAlreadyMesured, LOCAL_TPS_MEASURES);
-        return this.localTpsTransProcessed.reduce((a, v) => a + v, 0) / this.tpsMeasuresUpdate / measures * 1000000.0;
-    }
-
-    private globalLocalTps() {
-        let tps = 0;
-        for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-            tps += Atomics.load(this.localTpsArray, i);
-        }
-        return tps / 1000.0;
-    }
-
-    private async bench() {
         this.benchRunning = true;
         this.benchStartTime = new Date().getTime();
 
-        let promises = [];
-        for (let i = 0; i < this.commonConfig.maxActivePromises; i++) {
-            promises.push(this.createBenchPromise());
-            await sleep(this.commonConfig.promisesStartDelay);
-        }
-        await Promise.all(promises);
+        setInterval(() => {
+            Atomics.store(this.sharedAvgTpsArray, threadId - 1, this.workerAvgTps());
+        }, MAIN_THREAD_COMMUNICATION_DELAY);
+
+        // To not start all threads in one time
+        await sleep(this.targetTransactionTime * (threadId - 1));
+        await this.transactionsPushLoop();
     }
 
-    private stopBench() {
-        this.benchRunning = false;
+    private async createBenchPromise(idInPromisesArray: number) {
+        this.activePromises[idInPromisesArray] = true;
+
+        const trStartTime = new Date().getTime();
+
+        this.transactionsStarted++;
+        let key = `${threadId}-${this.transactionsStarted}`;
+
+        let respCode = -1;
+        try {
+            respCode = await this.benchStep!.commitBenchmarkTransaction(key);
+        } catch (e) {
+            if (this.commonConfig.stopOn.error === "print")
+                console.error(e ? (e.stack ? e.stack : e) : "");
+            if (this.commonConfig.stopOn.error === "stop") {
+                this.benchRunning = false;
+                this.benchError = e;
+            }
+        }
+
+        this.transactionsProcessed++;
+        const trEndTime = new Date().getTime();
+        const trDuration = trEndTime - trStartTime;
+
+        Atomics.store(this.sharedTransProcessedArray, threadId - 1, this.transactionsProcessed);
+        Atomics.store(this.sharedAvgTpsArray, threadId - 1, this.workerAvgTps());
+
+        parentPort!.postMessage({
+            method: "onTransaction",
+            respCode,
+            trDuration
+        });
+
+        this.activePromises[idInPromisesArray] = false;
+    }
+
+    private workerAvgTps() {
+        return this.transactionsProcessed / (new Date().getTime() - this.benchStartTime) * 100_000_000.0;
+    }
+
+    private async tplSleep(speedUp = false) {
+        let tpsDiff = this.workerAvgTps() / 100_000.0 - this.commonConfig.tps / this.commonConfig.threadsAmount;
+
+        if (Math.abs(tpsDiff) > SLEEP_COEF_LEARNING_MAX) {
+            if (tpsDiff > 0)
+                tpsDiff = SLEEP_COEF_LEARNING_MAX;
+            else
+                tpsDiff = -SLEEP_COEF_LEARNING_MAX
+        }
+
+        this.sleepCoef += tpsDiff * SLEEP_COEF_LEARNING_FACTOR;
+
+        let tts = this.targetThreadTransactionTime * this.sleepCoef;
+        if (speedUp)
+            await sleep(tts / SPEEDUP_ON_PROMISES_LIMIT_EXCEED);
+        else
+            await sleep(tts);
+    }
+
+    private async transactionsPushLoop() {
+        while (this.benchRunning) {
+            const freePromisePlace = this.activePromises.findIndex((active) => !active);
+            if (freePromisePlace === -1) {
+                await this.tplSleep(true);
+                continue;
+            }
+
+            // noinspection JSIgnoredPromiseFromCall
+            this.createBenchPromise(freePromisePlace);
+
+            await this.tplSleep(false);
+        }
+        if (this.benchError) {
+            throw this.benchError;
+        }
     }
 }
 
