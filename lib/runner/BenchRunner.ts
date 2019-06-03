@@ -3,6 +3,7 @@ import BlockchainModule from "../module/BlockchainModule";
 import Logger from "../resources/Logger";
 import WorkersWrapper from "../worker/WorkersWrapper";
 import Config from "../config/Config";
+import PrometheusPusher from "../metrics/PrometheusPusher";
 
 export default class BenchRunner {
     private readonly blockchainModule: BlockchainModule;
@@ -20,7 +21,14 @@ export default class BenchRunner {
     }
 
     async bench() {
-        this.logger.log(Strings.log.preparingToBenchmark());
+        let prometheusPusher = undefined;
+
+        if (this.commonConfig.prometheusTelemetry.enable) {
+            this.logger.log(Strings.log.preparingTelemetry());
+            prometheusPusher = new PrometheusPusher(this.commonConfig);
+            await prometheusPusher.test();
+            this.logger.log(Strings.log.preparingTelemetrySuccess());
+        }
 
         let prepareStep = this.blockchainModule
             .createPrepareStep(this.commonConfig, this.moduleConfig, this.logger);
@@ -36,6 +44,7 @@ export default class BenchRunner {
             this.logger,
             benchConfig,
             this.commonConfig,
+            prometheusPusher
         ).bench();
     }
 }

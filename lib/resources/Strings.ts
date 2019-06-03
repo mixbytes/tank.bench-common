@@ -1,6 +1,12 @@
 const Strings = {
     log: {
 
+        preparingTelemetry: () =>
+            `Checking prometheus pushgateway endpoint...`,
+
+        preparingTelemetrySuccess: () =>
+            `Checking prometheus pushgateway endpoint success!`,
+
         preparingToBenchmark: () =>
             `Preparing to benchmark...`,
 

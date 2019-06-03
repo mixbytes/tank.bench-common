@@ -3,7 +3,7 @@ const WARN = 1;
 const LOG = 2;
 
 const _log = (config: any, level: number, msg: any) => {
-    if (level <= config.log.logLevel) {
+    if (level <= config.logLevel) {
         switch (level) {
             case ERROR:
                 console.error(`${msg}`);
@@ -18,25 +18,25 @@ const _log = (config: any, level: number, msg: any) => {
 };
 
 export default class Logger {
-    private readonly config: any;
+    private readonly commonConfig: any;
 
     constructor(config: any) {
-        this.config = config;
+        this.commonConfig = config;
     }
 
     // noinspection JSUnusedGlobalSymbols
     error(msg: any): void {
-        _log(this.config, ERROR, msg)
+        _log(this.commonConfig, ERROR, msg)
     }
 
     // noinspection JSUnusedGlobalSymbols
     warn(msg: any): void {
-        _log(this.config, WARN, msg)
+        _log(this.commonConfig, WARN, msg)
     }
 
     // noinspection JSUnusedGlobalSymbols
     log(msg: any, level = LOG): void {
-        _log(this.config, level, msg)
+        _log(this.commonConfig, level, msg)
     }
 
     // noinspection JSUnusedGlobalSymbols
