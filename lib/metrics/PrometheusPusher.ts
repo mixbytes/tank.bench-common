@@ -48,7 +48,16 @@ export default class PrometheusPusher {
 
     async test() {
         await new Promise((resolve, reject) => {
-            this.pushGateway.push({jobName: 'bench-load'}, (_, httpResponse) => {
+            this.pushGateway.push({jobName: 'bench-load'}, (error, httpResponse) => {
+                if (error) {
+                    reject(new Error(`Prometheus error, ${error}`));
+                    return;
+                }
+                if (!httpResponse) {
+                    reject(new Error(`Prometheus error, httpResponse is null, no error specified`));
+                    return;
+                }
+
                 // 202 is a success code of pushgateway
                 if (httpResponse.statusCode !== 202)
                     reject(new Error(`Prometheus error, ${httpResponse.statusCode}, ${httpResponse.statusMessage}`));
