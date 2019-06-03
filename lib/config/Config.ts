@@ -42,6 +42,8 @@ export default class Config {
         }
         this._commonConfig = commonConvict.getProperties();
 
+        this.validateCommonConfig();
+
         const moduleConvict = convict(blockchainModule.getConfigSchema());
         moduleConvict.loadFile(moduleConfigFilePath);
         try {
@@ -78,5 +80,10 @@ export default class Config {
 
     getModuleConfig(): any {
         return {...this._moduleConfig};
+    }
+
+    private validateCommonConfig() {
+        if (this._commonConfig.prometheusTelemetry.enable && this._commonConfig.prometheusTelemetry.url === "")
+            throw new Error("If you enable prometheus telemerty, you must specify it's endpoint URL in config.");
     }
 }

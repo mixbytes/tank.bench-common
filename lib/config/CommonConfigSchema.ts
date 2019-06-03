@@ -29,32 +29,46 @@ export default {
         url: {
             arg: 'prometheusTelemetry.url',
             format: String,
-            default: null,
+            default: "",
             doc: "url of prometheus pushgateway"
         },
         user: {
             arg: 'prometheusTelemetry.user',
             format: String,
-            default: null,
+            default: "admin",
             doc: "user of prometheus pushgateway. If do not want to use auth, leave blank"
         },
         password: {
             arg: 'prometheusTelemetry.password',
             format: String,
-            default: null,
+            default: "admin",
             sensitive: true,
             doc: "password of prometheus pushgateway. If do not want to use auth, leave blank"
         },
         respCodeBuckets: {
             arg: 'prometheusTelemetry.respCodeBuckets',
             format: Array,
-            default: null,
+            default: [
+                100,
+                200,
+                300,
+                400,
+                500
+            ],
             doc: "possible return codes from node"
         },
         trxsDurationBuckets: {
             arg: 'prometheusTelemetry.trxsDurationBuckets',
             format: Array,
-            default: null,
+            default: [
+                10,
+                50,
+                100,
+                200,
+                500,
+                2000,
+                10000
+            ],
             doc: "buckets for possible transaction durations"
         }
     },
