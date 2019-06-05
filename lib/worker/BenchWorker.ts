@@ -56,7 +56,7 @@ class Bench {
         this.benchStep = new blockchainModule.default()
             .createBenchStep(this.benchConfig, new Logger(this.commonConfig));
 
-        await this.benchStep!.asyncConstruct();
+        await this.benchStep!.asyncConstruct(threadId - 1);
         parentPort!.postMessage({method: "onStartBenchmark"});
 
         this.benchRunning = true;

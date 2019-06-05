@@ -7,9 +7,4 @@ export default class Step {
     constructor(logger: Logger) {
         this.logger = logger;
     }
-
-// noinspection JSMethodCanBeStatic
-    async asyncConstruct(): Promise<any> {
-        return Promise.resolve();
-    }
 }

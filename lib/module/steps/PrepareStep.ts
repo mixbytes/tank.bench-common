@@ -13,4 +13,6 @@ export default abstract class PrepareStep extends Step {
     }
 
     abstract async prepare(): Promise<any>;
+
+    abstract async asyncConstruct(): Promise<any>;
 }
