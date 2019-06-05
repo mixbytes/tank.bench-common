@@ -23,6 +23,7 @@ export default class BenchRunner {
     async bench() {
         let prometheusPusher = undefined;
 
+        // Prepare prometheus
         if (this.commonConfig.prometheusTelemetry.enable) {
             this.logger.log(Strings.log.preparingTelemetry());
             prometheusPusher = new PrometheusPusher(this.commonConfig);
@@ -30,21 +31,27 @@ export default class BenchRunner {
             this.logger.log(Strings.log.preparingTelemetrySuccess());
         }
 
+        // Process prepare step
         let prepareStep = this.blockchainModule
             .createPrepareStep(this.commonConfig, this.moduleConfig, this.logger);
-
         await prepareStep.asyncConstruct();
-
         let benchConfig = await prepareStep.prepare();
 
+        // Process benchData step
+        let benchTelemetryStep = this.blockchainModule
+            .createBenchTelemetryStep(benchConfig, this.logger);
+        await benchTelemetryStep.asyncConstruct();
+
+        // Log the start of blockchain
         this.logger.log(Strings.log.startingBenchmark(this.commonConfig.threadsAmount));
 
         await new WorkersWrapper(
-            this.blockchainModule.getFileName(),
+            this.blockchainModule,
+            benchTelemetryStep,
             this.logger,
             benchConfig,
             this.commonConfig,
-            prometheusPusher
+            prometheusPusher,
         ).bench();
     }
 }

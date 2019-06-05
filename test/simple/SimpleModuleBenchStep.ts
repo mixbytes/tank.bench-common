@@ -9,4 +9,10 @@ export default class SimpleModuleBenchStep extends BenchStep {
             }, 100);
         });
     }
+
+
+    async asyncConstruct(threadId: number): Promise<any> {
+        console.log(threadId);
+        return Promise.resolve();
+    }
 }

@@ -12,5 +12,8 @@ export default abstract class BenchStep extends Step {
 
     abstract async commitBenchmarkTransaction(uniqueData: any): Promise<number>;
 
-    abstract async asyncConstruct(threadId: number): Promise<any>;
+    // noinspection JSMethodCanBeStatic
+    async asyncConstruct(threadId: number): Promise<any> {
+        return Promise.resolve();
+    }
 }

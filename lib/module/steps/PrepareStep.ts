@@ -14,5 +14,8 @@ export default abstract class PrepareStep extends Step {
 
     abstract async prepare(): Promise<any>;
 
-    abstract async asyncConstruct(): Promise<any>;
+    // noinspection JSMethodCanBeStatic
+    async asyncConstruct(): Promise<any> {
+        return Promise.resolve();
+    }
 }

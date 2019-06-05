@@ -2,10 +2,10 @@
   "logLevel": 3,
   "stopOn": {
     "error": "no",
-    "processedTransactions": 3000
+    "processedTransactions": 300
   },
   "prometheusTelemetry": {
-    "enable": true,
+    "enable": false,
     "url": "http://127.0.0.1:9091",
     "user": "admin",
     "password": "admin",
@@ -26,6 +26,7 @@
       10000
     ]
   },
+  "telemetryStepInterval": 1000,
   "tps": 123.4,
   "threadsAmount": 8,
   "maxActivePromises": 6

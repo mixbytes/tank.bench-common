@@ -2,6 +2,8 @@ import {Worker} from "worker_threads";
 import Logger from "../resources/Logger";
 import getWorkerFilePath from "./BenchWorker";
 import PrometheusPusher from "../metrics/PrometheusPusher";
+import BlockchainModule from "../module/BlockchainModule";
+import BenchTelemetryStep, {TelemetryData} from "../module/steps/BenchTelemetryStep";
 
 const FINISH_CHECKER_INTERVAL = 100;
 const PROMETHEUS_UPDATE_INTERVAL = 200;
@@ -12,12 +14,13 @@ export default class WorkersWrapper {
     private readonly benchConfig: any;
     private readonly commonConfig: any;
     private readonly logger: Logger;
-    private readonly blockchainModuleFileName: string;
+    private readonly blockchainModule: BlockchainModule;
     private readonly workerFilePath: string;
     private readonly prometheusPusher?: PrometheusPusher;
 
     private lastPrometheusTrxs = 0;
     private processedTransactions = 0;
+    private benchStartTime = 0;
     private readonly trxsEndTimes: number[];
 
     private readonly sharedAvgTpsBuffer: SharedArrayBuffer;
@@ -29,8 +32,12 @@ export default class WorkersWrapper {
     private readonly workers: Worker[];
     private readonly terminatedWorkers = new Map<Worker, boolean>();
 
+    private readonly benchTelemetryStep: BenchTelemetryStep;
+
     private logInterval: any;
     private stopIfProcessedInterval: any;
+    private prometheusInterval: any;
+    private telemetryStepInterval: any;
 
     private benchError: any = null;
 
@@ -38,13 +45,15 @@ export default class WorkersWrapper {
     private benchResolve?: (value?: (PromiseLike<Promise<Promise<any>>> | Promise<Promise<any>>)) => void;
     private benchReject?: (reason?: any) => void;
 
-    constructor(blockchainModuleFileName: string,
+    constructor(blockchainModule: BlockchainModule,
+                benchTelemetryStep: BenchTelemetryStep,
                 logger: Logger,
                 benchConfig: any,
                 commonConfig: any,
                 prometheusPusher?: PrometheusPusher) {
 
-        this.blockchainModuleFileName = blockchainModuleFileName;
+        this.blockchainModule = blockchainModule;
+        this.benchTelemetryStep = benchTelemetryStep;
         this.benchConfig = benchConfig;
         this.logger = logger;
         this.commonConfig = commonConfig;
@@ -79,24 +88,30 @@ export default class WorkersWrapper {
             return;
 
         clearInterval(this.logInterval);
+        clearInterval(this.prometheusInterval);
+        clearInterval(this.telemetryStepInterval);
 
-        if (this.benchError)
-            console.log("Benchmark finished with error");
-        else
-            console.log("Benchmark finished successfully");
+        this.benchTelemetryStep.onBenchEnded(this.calcTelemetryStepData()).then(() => {
+            if (this.benchError)
+                console.log("Benchmark finished with error");
+            else
+                console.log("Benchmark finished successfully");
 
-        console.log(`Total processed: ${this.processedTransactions}`);
-        console.log(`Local tps: ${this.calcLocalTps()}`);
-        console.log(`Avg   tps: ${this.calcAvgTps()}`);
-        console.log("");
+            console.log(`Total processed: ${this.processedTransactions}`);
+            console.log(`Local tps: ${this.calcLocalTps()}`);
+            console.log(`Avg   tps: ${this.calcAvgTps()}`);
+            console.log("");
 
-        if (this.benchError)
-            this.benchReject!(this.benchError);
-        else {
-            if (this.prometheusPusher)
-                this.prometheusPusher.forcePush();
-            this.benchResolve!();
-        }
+            if (this.benchError)
+                this.benchReject!(this.benchError);
+            else {
+                if (this.prometheusPusher)
+                    this.prometheusPusher.forcePush();
+                this.benchResolve!();
+            }
+        }).catch(e => {
+            this.benchReject!(e);
+        });
     }
 
     private onMessage(worker: Worker, message: any) {
@@ -143,7 +158,7 @@ export default class WorkersWrapper {
                 commonConfig: this.commonConfig,
                 sharedAvgTpsBuffer: this.sharedAvgTpsBuffer,
                 sharedTransProcessedBuffer: this.sharedTransProcessedBuffer,
-                blockchainModuleFileName: this.blockchainModuleFileName
+                blockchainModuleFileName: this.blockchainModule.getFileName()
             }
         });
 
@@ -176,10 +191,27 @@ export default class WorkersWrapper {
             / (new Date().getTime() - this.trxsEndTimes[0]) * 1000;
     }
 
+    private calcTelemetryStepData(): TelemetryData {
+        return {
+            avgTps: this.calcAvgTps(),
+            lastLocalTps: this.calcLocalTps(),
+            processedTransactions: this.processedTransactions,
+            benchTime: new Date().getTime() - this.benchStartTime,
+            processedTransactionsPerThread: Array.from(this.sharedTransProcessedArray)
+        };
+    }
+
     private startBench() {
+        for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+            this.addWorker();
+            this.activeWorkers++;
+        }
+
+        this.benchStartTime = new Date().getTime();
+
         if (this.prometheusPusher) {
             this.prometheusPusher.start();
-            setInterval(() => {
+            this.prometheusInterval = setInterval(() => {
                 const processed = this.processedTransactions;
                 this.prometheusPusher!.addProcessedTransactions(processed - this.lastPrometheusTrxs);
 
@@ -189,10 +221,9 @@ export default class WorkersWrapper {
             }, PROMETHEUS_UPDATE_INTERVAL);
         }
 
-        for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-            this.addWorker();
-            this.activeWorkers++;
-        }
+        this.telemetryStepInterval = setInterval(() => {
+            this.benchTelemetryStep.onKeyPoint(this.calcTelemetryStepData());
+        }, this.commonConfig.telemetryStepInterval);
 
         this.stopIfProcessedInterval = setInterval(() => {
             if (this.processedTransactions >= this.commonConfig.stopOn.processedTransactions) {

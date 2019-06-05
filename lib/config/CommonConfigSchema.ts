@@ -72,6 +72,12 @@ export default {
             doc: "buckets for possible transaction durations"
         }
     },
+    telemetryStepInterval: {
+        arg: 'common.dataStepInterval',
+        format: Number,
+        default: null,
+        doc: "call onKeyPoint every N milliseconds"
+    },
     tps: {
         arg: 'common.tps',
         format: Number,

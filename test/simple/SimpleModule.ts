@@ -1,6 +1,7 @@
+import {BenchStep, BenchTelemetryStep, BlockchainModule, Logger, PrepareStep} from "../../lib";
 import SimpleModuleBenchStep from "./SimpleModuleBenchStep";
-import {BenchStep, BlockchainModule, Logger, PrepareStep} from "../../lib";
 import SimpleModulePrepareStep from "./SimpleModulePrepareStep";
+import SimpleModuleBenchTelemetryStep from "./SimpleModuleBenchTelemetryStep";
 
 export default class SimpleModule extends BlockchainModule {
     createBenchStep(benchConfig: any, logger: Logger): BenchStep {
@@ -9,6 +10,10 @@ export default class SimpleModule extends BlockchainModule {
 
     createPrepareStep(commonConfig: any, moduleConfig: any, logger: Logger): PrepareStep {
         return new SimpleModulePrepareStep(commonConfig, moduleConfig, logger);
+    }
+
+    createBenchTelemetryStep(benchConfig: any, logger: Logger): BenchTelemetryStep {
+        return new SimpleModuleBenchTelemetryStep(benchConfig, logger);
     }
 
     getConfigSchema(): any {
@@ -27,5 +32,4 @@ export default class SimpleModule extends BlockchainModule {
     getFileName(): string {
         return __filename;
     }
-
 }
