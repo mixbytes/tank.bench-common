@@ -226,9 +226,11 @@ export default class WorkersWrapper {
         }, this.commonConfig.telemetryStepInterval);
 
         this.stopIfProcessedInterval = setInterval(() => {
-            if (this.processedTransactions >= this.commonConfig.stopOn.processedTransactions) {
-                clearInterval(this.stopIfProcessedInterval);
-                this.stopBench();
+            if (this.commonConfig.stopOn.processedTransactions > 0) {
+                if (this.processedTransactions >= this.commonConfig.stopOn.processedTransactions) {
+                    clearInterval(this.stopIfProcessedInterval);
+                    this.stopBench();
+                }
             }
         }, FINISH_CHECKER_INTERVAL);
 
