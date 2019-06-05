@@ -1,11 +1,11 @@
-import {BenchStep} from "../../lib";
+import {BenchStep, TransactionResult} from "../../lib";
 
 export default class SimpleModuleBenchStep extends BenchStep {
-    async commitBenchmarkTransaction(uniqueData: any): Promise<number> {
-        return new Promise<any>(resolve => {
+    async commitBenchmarkTransaction(uniqueData: any): Promise<TransactionResult> {
+        return new Promise<TransactionResult>(resolve => {
             let code = Math.random() > 0.5 ? 200 : 500;
             setTimeout(() => {
-                resolve(code)
+                resolve({code: code, error: null})
             }, 100);
         });
     }

@@ -1,6 +1,11 @@
 import Step from "./Step";
 import Logger from "../../resources/Logger";
 
+export interface TransactionResult {
+    code: number,
+    error: any
+}
+
 export default abstract class BenchStep extends Step {
 
     protected benchConfig: any;
@@ -10,7 +15,7 @@ export default abstract class BenchStep extends Step {
         this.benchConfig = benchConfig;
     }
 
-    abstract async commitBenchmarkTransaction(uniqueData: any): Promise<number>;
+    abstract async commitBenchmarkTransaction(uniqueData: any): Promise<TransactionResult>;
 
     // noinspection JSMethodCanBeStatic
     async asyncConstruct(threadId: number): Promise<any> {

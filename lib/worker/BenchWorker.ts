@@ -1,6 +1,6 @@
 import {isMainThread, parentPort, threadId, workerData} from "worker_threads";
 import Logger from "../resources/Logger";
-import BenchStep from "../module/steps/BenchStep";
+import BenchStep, {TransactionResult} from "../module/steps/BenchStep";
 
 export default function getWorkerFilePath() {
     return __filename;
@@ -79,15 +79,19 @@ class Bench {
         this.transactionsStarted++;
         let key = `${threadId}-${this.transactionsStarted}`;
 
-        let respCode = -1;
+        let trRes: TransactionResult;
         try {
-            respCode = await this.benchStep!.commitBenchmarkTransaction(key);
+            trRes = await this.benchStep!.commitBenchmarkTransaction(key);
         } catch (e) {
+            trRes = {code: -1, error: e};
+        }
+
+        if (trRes.error) {
             if (this.commonConfig.stopOn.error === "print")
-                console.error(e ? (e.stack ? e.stack : e) : "");
+                console.error(trRes.error.stack ? trRes.error.stack : trRes.error);
             if (this.commonConfig.stopOn.error === "stop") {
                 this.benchRunning = false;
-                this.benchError = e;
+                this.benchError = trRes.error;
             }
         }
 
@@ -100,7 +104,7 @@ class Bench {
 
         parentPort!.postMessage({
             method: "onTransaction",
-            respCode,
+            respCode: trRes.code,
             trDuration
         });
 
