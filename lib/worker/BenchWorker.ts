@@ -1,6 +1,7 @@
 import {isMainThread, parentPort, threadId, workerData} from "worker_threads";
 import Logger from "../resources/Logger";
 import BenchStep, {TransactionResult} from "../module/steps/BenchStep";
+import {WORKER_STATE_PREPARED, WORKER_STATE_PREPARING, WORKER_STATE_START} from "./WorkersWrapper";
 
 export default function getWorkerFilePath() {
     return __filename;
@@ -57,7 +58,18 @@ class Bench {
             .createBenchStep(this.benchConfig, new Logger(this.commonConfig));
 
         await this.benchStep!.asyncConstruct(threadId - 1);
-        parentPort!.postMessage({method: "onStartBenchmark"});
+
+        Atomics.store(this.sharedTransProcessedArray, threadId - 1, WORKER_STATE_PREPARED);
+
+        parentPort!.postMessage({method: "onReady"});
+
+        Atomics.wait(this.sharedTransProcessedArray, threadId - 1, WORKER_STATE_START);
+
+        for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+            if (Atomics.load(this.sharedTransProcessedArray, i) == WORKER_STATE_PREPARING) {
+                return;
+            }
+        }
 
         this.benchRunning = true;
         this.benchStartTime = new Date().getTime();
@@ -88,7 +100,7 @@ class Bench {
 
         if (trRes.error) {
             if (this.commonConfig.stopOn.error === "print")
-                console.error(trRes.error.stack ? trRes.error.stack : trRes.error);
+                console.error(trRes.error.stack ? trRes.error.stack : trRes.error.toString());
             if (this.commonConfig.stopOn.error === "stop") {
                 this.benchRunning = false;
                 this.benchError = trRes.error;
@@ -160,6 +172,6 @@ if (!isMainThread) {
             parentPort!.postMessage({method: "onStopBenchmark"});
         })
         .catch(e => {
-            parentPort!.postMessage({method: "onError", error: e});
+            parentPort!.postMessage({method: "onError", error: e ? (e.stack ? e.stack : e.toString()) : null});
         });
 }

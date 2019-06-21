@@ -12,7 +12,8 @@ export default class SimpleModuleBenchStep extends BenchStep {
 
 
     async asyncConstruct(threadId: number): Promise<any> {
-        console.log(threadId);
+        if (Math.random() > 0.5)
+            throw new Error("wft");
         return Promise.resolve();
     }
 }

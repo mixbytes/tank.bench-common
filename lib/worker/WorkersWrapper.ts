@@ -10,6 +10,10 @@ const PROMETHEUS_UPDATE_INTERVAL = 200;
 const LOGGER_INTERVAL = 500;
 const LAST_TRXS_AMOUNT_FOR_LOCAL_TPS = 20;
 
+export const WORKER_STATE_PREPARING = -2;
+export const WORKER_STATE_PREPARED = -1;
+export const WORKER_STATE_START = 0;
+
 export default class WorkersWrapper {
     private readonly benchConfig: any;
     private readonly commonConfig: any;
@@ -67,7 +71,7 @@ export default class WorkersWrapper {
         this.sharedTransProcessedBuffer = new SharedArrayBuffer(4 * this.commonConfig.threadsAmount);
         this.sharedTransProcessedArray = new Int32Array(this.sharedTransProcessedBuffer);
 
-        this.sharedTransProcessedArray.fill(0);
+        this.sharedTransProcessedArray.fill(WORKER_STATE_PREPARING);
 
         this.workers = [];
 
@@ -78,7 +82,10 @@ export default class WorkersWrapper {
         return new Promise((resolve, reject) => {
             this.benchResolve = resolve;
             this.benchReject = reject;
-            this.startBench();
+            this.activeWorkers = this.commonConfig.threadsAmount;
+            for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+                this.addWorker();
+            }
         })
     }
 
@@ -87,9 +94,12 @@ export default class WorkersWrapper {
         if (this.activeWorkers !== 0)
             return;
 
-        clearInterval(this.logInterval);
-        clearInterval(this.prometheusInterval);
-        clearInterval(this.telemetryStepInterval);
+        if (this.logInterval)
+            clearInterval(this.logInterval);
+        if (this.prometheusInterval)
+            clearInterval(this.prometheusInterval);
+        if (this.telemetryStepInterval)
+            clearInterval(this.telemetryStepInterval);
 
         this.benchTelemetryStep.onBenchEnded(this.calcTelemetryStepData()).then(() => {
             if (this.benchError)
@@ -124,7 +134,8 @@ export default class WorkersWrapper {
                 break;
             case "onError":
                 this.benchError = message.error;
-                clearInterval(this.stopIfProcessedInterval);
+                if (this.stopIfProcessedInterval)
+                    clearInterval(this.stopIfProcessedInterval);
                 worker.terminate(() => {
                     this.onWorkerTerminate();
                 });
@@ -144,7 +155,15 @@ export default class WorkersWrapper {
                     this.prometheusPusher.addTrxDuration(trDuration);
                 }
                 break;
-            case "onStartBenchmark":
+            case "onReady":
+                for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+                    if (Atomics.load(this.sharedTransProcessedArray, i) != WORKER_STATE_PREPARED)
+                        return;
+                }
+                for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+                    Atomics.store(this.sharedTransProcessedArray, i, WORKER_STATE_START)
+                }
+                this.startBench();
                 break;
             default:
                 throw new Error("Unknown method");
@@ -202,10 +221,6 @@ export default class WorkersWrapper {
     }
 
     private startBench() {
-        for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-            this.addWorker();
-            this.activeWorkers++;
-        }
 
         this.benchStartTime = new Date().getTime();
 
