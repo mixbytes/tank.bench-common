@@ -4,7 +4,7 @@
 
 This is a part of [TANK](https://github.com/mixbytes/tank) - the ultimate tool for testing blockchain performance
 
-### What is it?
+## What is it?
 
 **Tank.bench-common** is the repo that contains code that applies load to blockchain nodes.
 
@@ -12,8 +12,12 @@ It can prepare your blockchain for benchmark (create accounts, deploy tokens, et
 specified tps (transactions per second), providing telemetry (using push-model). You also can specify such params as 
 threads amount (applies load using node's **worker_threads**).
 
+## Requirements
 
-### How to install?
+To use this package you need at least **node v11** because of using **worker-threads** feature to run the benchmark
+using multiple CPUs. 
+
+## How to install?
 
 This repo is a library, so you can use it as dependency of your blockchain implementation.
 You can use npm or yarn to install this package.
@@ -22,16 +26,7 @@ You can use npm or yarn to install this package.
 npm install tank.bench-common -S
 ```
 
-### How to use?
- 
-```typescript
-import {BenchRunner} from "tank.bench-common";
-import MyModule from "./MyModule";
-
-new BenchRunner(new MyModule()).bench().catch(e => {
-    console.error(e);
-})
-```
+## How to use?
 
 You should use your own repo
 to write blockchain-specific code (for example, see [Haya implementation](https://github.com/mixbytes/tank.bench-haya) 
@@ -91,18 +86,18 @@ export default class MyModule extends BlockchainModule {
 }
 ```
 
-#### What are the steps?
+### What are the steps?
 
 Step is a class that contains some code that will run on specific time and thread. Every step is used for it's
 own purpose.
 
-##### PrepareStep
+#### PrepareStep
 
 The main goal of the `PrepareStep` is to commit preparation transactions like accounts creation. Do this job in the
 `prepare` method, returning **Promise**. The object returned from this promise will be used as config for the next step,
 the **BenchStep**
 
-##### BenchStep
+#### BenchStep
 
 `BenchStep` is used to commit load transactions. It provides `commitBenchmarkTransaction` method, in which you
 can commit transactions. Important part of this step that it will be instantiated as many times as provided in config
@@ -115,7 +110,7 @@ when you resolve this promise. In this promise you have to specify **responseCod
 Both `PrepareStep` and `BenchStep` provide `asyncConstruct` method to implement. No methods will be called in
 your implementation before the promise you returned become resolved. This may be useful.
 
-##### TelemetryStep
+#### TelemetryStep
 
 `TelemetryStep` contains code that will be called in some specific keypoint during benchmark. Every method takes 
 **telemetryData**. It is the structure containing information such as TPS and some other data.
@@ -127,7 +122,7 @@ your implementation before the promise you returned become resolved. This may be
 This step can be used if you want to have your own telemetry (not using built-in **prometheus** one), or just to do
 logging stuff.
 
-#### How to run?
+### How to run?
 
 After you implemented all required interfaces, to run the bench, just do the following thing:
 
@@ -137,7 +132,7 @@ new BenchRunner(new MyModule()).bench().then(e => console.log(e));
 
 It will start benchmark, starting with `PrepareStep`. If any error occured, it will stop and log the error.
 
-#### Configuration
+### Configuration
 
 The implementation of **tank.bench-common** uses **2** different configuration files - one is for
 common code part, and the other - for blockchain-specific code part. The common one is specified by 
@@ -152,7 +147,7 @@ and **--moduleconfig** (and their short versions, **-cc** and **-mc**).
 
 For example, `npm start -- -mc mymodule.json` will get module config from `mymodule.json` file.
 
-##### Common code configuration
+#### Common code configuration
 
 Here is the list of available configuration parameters:
 
@@ -177,3 +172,9 @@ Here is the list of available configuration parameters:
 * **maxActivePromises** - specify the maximum amount of promises to use in one **worker_thread** during benchmark.
 
 All fields are required, if otherwise not written.
+
+
+## Troubleshooting
+
+* ####Cannot find module 'worker_threads'
+    To fix this problem you should switch to using at least **node v11**
