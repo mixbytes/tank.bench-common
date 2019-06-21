@@ -12,10 +12,10 @@ export default abstract class PrepareStep extends Step {
         this.moduleConfig = moduleConfig;
     }
 
-    abstract async prepare(): Promise<any>;
-
     // noinspection JSMethodCanBeStatic
-    async asyncConstruct(): Promise<any> {
+    asyncConstruct(): Promise<any> {
         return Promise.resolve();
     }
+
+    abstract prepare(): Promise<any>;
 }

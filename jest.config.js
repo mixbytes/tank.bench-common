@@ -1,9 +1,5 @@
 module.exports = {
-    "roots": [
-        "<rootDir>/test"
+    roots: [
+        "<rootDir>/dist/test"
     ],
-    "transform": {
-        "^.+\\.tsx?$": "ts-jest",
-    },
-    preset: 'ts-jest/presets/js-with-ts'
 };

@@ -176,5 +176,6 @@ All fields are required, if otherwise not written.
 
 ## Troubleshooting
 
-* ####Cannot find module 'worker_threads'
+* **Cannot find module 'worker_threads'**
+
     To fix this problem you should switch to using at least **node v11**

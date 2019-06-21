@@ -21,10 +21,10 @@ export default abstract class BenchTelemetryStep extends Step {
     // Should be fast
     abstract onKeyPoint(d: TelemetryData): any;
 
-    abstract async onBenchEnded(d: TelemetryData): Promise<any>;
+    abstract onBenchEnded(d: TelemetryData): Promise<any>;
 
     // noinspection JSMethodCanBeStatic
-    async asyncConstruct(): Promise<any> {
+    asyncConstruct(): Promise<any> {
         return Promise.resolve();
     }
 }

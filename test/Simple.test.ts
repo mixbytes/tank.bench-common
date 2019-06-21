@@ -1,5 +1,5 @@
-import {BenchRunner} from "../dist/lib";
-import SimpleModule from "../dist/test/simple/SimpleModule";
+import {BenchRunner} from "../lib/index"
+import SimpleModule from "./simple/SimpleModule";
 
 test("Simple test", async cb => {
     jest.setTimeout(99999999);

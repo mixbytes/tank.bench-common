@@ -1,14 +1,36 @@
 import Logger from "../resources/Logger";
 import BenchStep from "./steps/BenchStep";
 import PrepareStep from "./steps/PrepareStep";
-import BenchTelemetryStep from "./steps/BenchTelemetryStep";
+import BenchTelemetryStep, {TelemetryData} from "./steps/BenchTelemetryStep";
+
+class DefaultPrepareStep extends PrepareStep {
+    async prepare(): Promise<any> {
+        return {
+            commonConfig: this.commonConfig,
+            moduleConfig: this.moduleConfig
+        }
+    }
+}
+
+class DefaultBenchTelemetryStep extends BenchTelemetryStep {
+    onBenchEnded(d: TelemetryData): Promise<any> {
+        return Promise.resolve();
+    }
+
+    onKeyPoint(d: TelemetryData): any {
+    }
+}
 
 export default abstract class BlockchainModule {
     abstract createBenchStep(benchConfig: any, logger: Logger): BenchStep;
 
-    abstract createPrepareStep(commonConfig: any, moduleConfig: any, logger: Logger): PrepareStep;
+    createPrepareStep(commonConfig: any, moduleConfig: any, logger: Logger): PrepareStep {
+        return new DefaultPrepareStep(commonConfig, moduleConfig, logger);
+    }
 
-    abstract createBenchTelemetryStep(benchConfig: any, logger: Logger): BenchTelemetryStep;
+    createBenchTelemetryStep(benchConfig: any, logger: Logger): BenchTelemetryStep {
+        return new DefaultBenchTelemetryStep(benchConfig, logger);
+    }
 
     abstract getConfigSchema(): any;
 
