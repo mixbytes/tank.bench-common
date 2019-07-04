@@ -7,7 +7,7 @@ import PrometheusPusher from "../metrics/PrometheusPusher";
 
 export default class BenchRunner {
     private readonly blockchainModule: BlockchainModule;
-    private readonly config: Config;
+    private readonly config!: Config;
     private readonly commonConfig: any;
     private readonly moduleConfig: any;
     private readonly logger: Logger;
@@ -33,20 +33,17 @@ export default class BenchRunner {
 
         // Process prepare step
         let prepareStep = this.blockchainModule
-            .createPrepareStep(this.commonConfig, this.moduleConfig, this.logger);
+            .createPreparationStep(this.commonConfig, this.moduleConfig, this.logger);
         await prepareStep.asyncConstruct();
         let benchConfig = await prepareStep.prepare();
 
         // Process benchData step
         let benchTelemetryStep = this.blockchainModule
-            .createBenchTelemetryStep(benchConfig, this.logger);
+            .createTelemetryStep(benchConfig, this.logger);
         await benchTelemetryStep.asyncConstruct();
 
-        // Log the start of blockchain
-        this.logger.log(Strings.log.startingBenchmark(this.commonConfig.threadsAmount));
-
         await new WorkersWrapper(
-            this.blockchainModule,
+            this.config.benchCasePath,
             benchTelemetryStep,
             this.logger,
             benchConfig,

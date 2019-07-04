@@ -1,7 +1,13 @@
 import {isMainThread, parentPort, threadId, workerData} from "worker_threads";
 import Logger from "../resources/Logger";
-import BenchStep, {TransactionResult} from "../module/steps/BenchStep";
-import {WORKER_STATE_PREPARED, WORKER_STATE_PREPARING, WORKER_STATE_START} from "./WorkersWrapper";
+import BenchCase, {TransactionResult} from "../module/steps/BenchCase";
+import {
+    WORKER_ERROR_DEFAULT,
+    WORKER_STATE_PREPARED,
+    WORKER_STATE_PREPARING,
+    WORKER_STATE_START
+} from "./WorkersWrapper";
+import {resolve} from "path";
 
 export default function getWorkerFilePath() {
     return __filename;
@@ -17,7 +23,7 @@ const MAIN_THREAD_COMMUNICATION_DELAY = 50;
 // const SLEEP_COEF_LEARNING_MAX = 0.2;
 
 class Bench {
-    benchStep?: BenchStep;
+    benchCase!: BenchCase;
     benchRunning = false;
     transactionsStarted = 0;
     transactionsProcessed = 0;
@@ -27,6 +33,8 @@ class Bench {
     benchError: any;
     sleepCoef = 1;
 
+    readonly benchCasePath = workerData.benchCasePath;
+
     readonly sharedAvgTpsBuffer = workerData.sharedAvgTpsBuffer;
     readonly sharedAvgTpsArray = new Int32Array(this.sharedAvgTpsBuffer);
 
@@ -35,7 +43,6 @@ class Bench {
 
     readonly benchConfig = workerData.benchConfig;
     readonly commonConfig = workerData.commonConfig;
-    readonly blockchainModuleFileName = workerData.blockchainModuleFileName;
 
     readonly targetTransactionTime = 1000.0 / this.commonConfig.tps;
     readonly targetThreadTransactionTime = this.targetTransactionTime * this.commonConfig.threadsAmount;
@@ -53,11 +60,14 @@ class Bench {
     }
 
     async startBench() {
-        let blockchainModule = await import(this.blockchainModuleFileName);
-        this.benchStep = new blockchainModule.default()
-            .createBenchStep(this.benchConfig, new Logger(this.commonConfig));
+        let benchCaseImport = await import(resolve(this.benchCasePath));
+        if (benchCaseImport.default) {
+            this.benchCase = <BenchCase>new benchCaseImport.default(this.benchConfig, new Logger(this.commonConfig));
+        } else {
+            this.benchCase = <BenchCase>new benchCaseImport(this.benchConfig, new Logger(this.commonConfig));
+        }
 
-        await this.benchStep!.asyncConstruct(threadId - 1);
+        await this.benchCase.asyncConstruct(threadId - 1);
 
         Atomics.store(this.sharedTransProcessedArray, threadId - 1, WORKER_STATE_PREPARED);
 
@@ -93,9 +103,9 @@ class Bench {
 
         let trRes: TransactionResult;
         try {
-            trRes = await this.benchStep!.commitBenchmarkTransaction(key);
+            trRes = await this.benchCase.commitTransaction(key);
         } catch (e) {
-            trRes = {code: -1, error: e};
+            trRes = {code: WORKER_ERROR_DEFAULT, error: e};
         }
 
         if (trRes.error) {
@@ -105,6 +115,9 @@ class Bench {
                 this.benchRunning = false;
                 this.benchError = trRes.error;
             }
+            Atomics.store(this.sharedAvgTpsArray, threadId - 1, this.workerAvgTps());
+            this.activePromises[idInPromisesArray] = 0;
+            return;
         }
 
         this.transactionsProcessed++;

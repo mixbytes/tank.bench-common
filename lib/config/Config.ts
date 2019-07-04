@@ -6,6 +6,7 @@ import * as convict from "convict";
 export default class Config {
     private readonly _commonConfig: any;
     private readonly _moduleConfig: any;
+    private readonly _benchCasePath: string;
 
     constructor(blockchainModule: BlockchainModule) {
 
@@ -15,21 +16,26 @@ export default class Config {
         let moduleConfigFilePath = moduleDefaultConfigFilePath ?
             moduleDefaultConfigFilePath : Strings.constants.moduleConfigFilePath();
 
-        process.argv.forEach(processArg => {
-            Strings.constants.commonConfigFilePathArgs().forEach(arg => {
-                if (processArg.startsWith(arg)) {
-                    commonConfigFilePath = processArg.substr(arg.length);
-                }
-            });
-        });
+        let tmp = Config.processArg(Strings.constants.commonConfigFilePathArgs());
+        if (tmp) {
+            commonConfigFilePath = tmp;
+        }
 
-        process.argv.forEach(processArg => {
-            Strings.constants.moduleConfigFilePathArgs().forEach(arg => {
-                if (processArg.startsWith(arg)) {
-                    moduleConfigFilePath = processArg.substr(arg.length);
-                }
-            });
-        });
+        tmp = Config.processArg(Strings.constants.moduleConfigFilePathArgs());
+        if (tmp) {
+            moduleConfigFilePath = tmp;
+        }
+
+        if (blockchainModule.benchCasePath) {
+            this._benchCasePath = blockchainModule.benchCasePath;
+        } else {
+            tmp = Config.processArg(Strings.constants.benchCaseFilePathArgs());
+            if (tmp) {
+                this._benchCasePath = tmp;
+            } else {
+                throw new Error("You need to specify the bench case (using -case=<case_file> flag)");
+            }
+        }
 
         const commonConvict = convict(CommonConfigSchema);
         commonConvict.loadFile(commonConfigFilePath);
@@ -56,6 +62,10 @@ export default class Config {
         this._moduleConfig = moduleConvict.getProperties();
     }
 
+    get benchCasePath(): string {
+        return this._benchCasePath;
+    }
+
     static getConvictDocumentation = (convict: convict.Config<any>) => {
         let documentation = "";
         const recursion = (level: number, prefix: string, obj: any) => {
@@ -80,6 +90,18 @@ export default class Config {
 
     getModuleConfig(): any {
         return {...this._moduleConfig};
+    }
+
+    private static processArg(argVariants: string[]): string | null {
+        let ans = null;
+        process.argv.forEach(processArg => {
+            argVariants.forEach(arg => {
+                if (processArg.startsWith(arg)) {
+                    ans = processArg.substr(arg.length);
+                }
+            });
+        });
+        return ans
     }
 
     private validateCommonConfig() {

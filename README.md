@@ -41,27 +41,21 @@ In `getConfigSchema` method you should return schema of your configuration
 (using [node-convict](https://github.com/mozilla/node-convict) schema), so the configuration file of your module will
 be checked if it corresponds to this schema, otherwise the programm will throw error and stop.
 
-In `getFileName` you have to provide path to your module, because **worker-threads** will use it, so it needs this 
-fileName to require your module correctly.
-
 Implementing `getDefaultConfigFilePath` is optional; if you do it, you should return the default path to your module
 configuration file.
 
 
 ```typescript
-import {BlockchainModule, Logger, BenchStep, PrepareStep, BenchTelemetryStep} from "tank.bench-common"
+import {BlockchainModule, Logger, Preparation, Telemerty} from "tank.bench-common"
 
 export default class MyModule extends BlockchainModule {
-    createBenchStep(benchConfig: any, logger: Logger): BenchStep {
-        return new MyModuleBenchStep(benchConfig, logger);
+    
+    createPreparationStep(commonConfig: any, moduleConfig: any, logger: Logger): Preparation {
+        return new MyModulePreparation(commonConfig, moduleConfig, logger);
     }
-
-    createPrepareStep(commonConfig: any, moduleConfig: any, logger: Logger): PrepareStep {
-        return new MyModulePrepareStep(commonConfig, moduleConfig, logger);
-    }
-
-    createBenchTelemetryStep(benchConfig: any, logger: Logger): BenchTelemetryStep {
-        return new MyModuleBenchTelemeryStep(benchConfig, logger)
+    
+    createTelemetryStep(commonConfig: any, moduleConfig: any, logger: Logger): Telemetry {
+        return new MyModuleTelemetry(commonConfig, moduleConfig, logger);
     }
 
     getConfigSchema(): any {
@@ -78,11 +72,6 @@ export default class MyModule extends BlockchainModule {
     getDefaultConfigFilePath(): string | null {
         return "./myModule.bench.config.json"
     }
-
-    // Used to make worker_threads work
-    getFileName(): string {
-        return __filename;
-    }
 }
 ```
 
@@ -95,20 +84,7 @@ own purpose.
 
 The main goal of the `PrepareStep` is to commit preparation transactions like accounts creation. Do this job in the
 `prepare` method, returning **Promise**. The object returned from this promise will be used as config for the next step,
-the **BenchStep**
-
-#### BenchStep
-
-`BenchStep` is used to commit load transactions. It provides `commitBenchmarkTransaction` method, in which you
-can commit transactions. Important part of this step that it will be instantiated as many times as provided in config
-via **threadsAmount** parameter, each in it's own **worker_thread**. Also, you need too remember
-that the `commitBenchmarkTransaction` method can be called using multiple promises.
-
-You should return Promise from `commitBenchmarkTransaction` method, and transaction will be counted as processed
-when you resolve this promise. In this promise you have to specify **responseCode** or **error** to use telemetry correctly.
-
-Both `PrepareStep` and `BenchStep` provide `asyncConstruct` method to implement. No methods will be called in
-your implementation before the promise you returned become resolved. This may be useful.
+the **BenchCase**
 
 #### TelemetryStep
 
@@ -122,15 +98,41 @@ your implementation before the promise you returned become resolved. This may be
 This step can be used if you want to have your own telemetry (not using built-in **prometheus** one), or just to do
 logging stuff.
 
+### BenchCase
+
+`BenchCase` is a class that describes what load transactions to commit. 
+It provides `commitTransaction` method, in which you
+can commit transactions. Important part of this step that it will be instantiated as many times as provided in config
+via **threadsAmount** parameter, each in it's own **worker_thread**. Also, you need too remember
+that the `commitBenchmarkTransaction` method can be called using multiple promises.
+
+You should return Promise from `commitTransaction` method, and transaction will be counted as processed
+when you resolve this promise.
+In this promise you have to specify **responseCode** or **error** to use telemetry correctly.
+
+Both `Preparation` and `BenchCase` provide `asyncConstruct` method to implement. No methods will be called in
+your implementation before the promise you returned become resolved. This may be useful.
+
+Your `BenchCase` implementation class should be written in a separate file, exporting class that overrides `BenchCase`
+base class. Than you should pass it as command line argument.
+
+
 ### How to run?
 
 After you implemented all required interfaces, to run the bench, just do the following thing:
 
 ```typescript
-new BenchRunner(new MyModule()).bench().then(e => console.log(e));
+new MyModule().bench().then(e => console.log(e));
 ```
 
-It will start benchmark, starting with `PrepareStep`. If any error occured, it will stop and log the error.
+Note that you must specify at least one command line argument - the name of `BenchCase` implementation file.
+Like this:
+
+```bash
+npm start -- -case="./MyGreatCase"
+```
+
+It will start benchmark, starting with `Preparation`. If any error occurred, it will stop and log the error.
 
 ### Configuration
 
@@ -145,7 +147,7 @@ module config from **module.bench.config.json**. You can override this logic in 
 Also you can provide arguments to the programm overriding default paths of configuration. The are **--commonconfig** 
 and **--moduleconfig** (and their short versions, **-cc** and **-mc**).
 
-For example, `npm start -- -mc mymodule.json` will get module config from `mymodule.json` file.
+For example, `npm start -- -case="./MyGreatCase" -mc=mymodule.json` will get module config from `mymodule.json` file.
 
 #### Common code configuration
 
@@ -176,6 +178,6 @@ All fields are required, if otherwise not written.
 
 ## Troubleshooting
 
-* **Cannot find module 'worker_threads'**
-
-    To fix this problem you should switch to using at least **node v11**
+* Cannot find module 'worker_threads'
+  
+  To fix this problem you should switch to using at least **node v11**

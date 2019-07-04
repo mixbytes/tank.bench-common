@@ -1,19 +1,17 @@
-import BenchRunner from "./runner/BenchRunner";
 import BlockchainModule from "./module/BlockchainModule";
 import Step from "./module/steps/Step";
-import PrepareStep from "./module/steps/PrepareStep";
-import BenchStep, {TransactionResult} from "./module/steps/BenchStep";
-import BenchTelemetryStep, {TelemetryData} from "./module/steps/BenchTelemetryStep";
+import Preparation from "./module/steps/Preparation";
+import BenchCase, {TransactionResult} from "./module/steps/BenchCase";
+import Telemetry, {TelemetryData} from "./module/steps/Telemetry";
 import Logger from "./resources/Logger";
 
 // noinspection JSUnusedGlobalSymbols
 export {
-    BenchRunner,
     BlockchainModule,
     Step,
-    PrepareStep,
-    BenchStep,
-    BenchTelemetryStep,
+    Preparation,
+    BenchCase,
+    Telemetry,
     Logger,
     TelemetryData,
     TransactionResult

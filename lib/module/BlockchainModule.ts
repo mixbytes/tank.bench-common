@@ -1,9 +1,9 @@
 import Logger from "../resources/Logger";
-import BenchStep from "./steps/BenchStep";
-import PrepareStep from "./steps/PrepareStep";
-import BenchTelemetryStep, {TelemetryData} from "./steps/BenchTelemetryStep";
+import Preparation from "./steps/Preparation";
+import Telemetry, {TelemetryData} from "./steps/Telemetry";
+import BenchRunner from "../runner/BenchRunner";
 
-class DefaultPrepareStep extends PrepareStep {
+class DefaultPrepareStep extends Preparation {
     async prepare(): Promise<any> {
         return {
             commonConfig: this.commonConfig,
@@ -12,7 +12,7 @@ class DefaultPrepareStep extends PrepareStep {
     }
 }
 
-class DefaultBenchTelemetryStep extends BenchTelemetryStep {
+class DefaultBenchTelemetryStep extends Telemetry {
     onBenchEnded(d: TelemetryData): Promise<any> {
         return Promise.resolve();
     }
@@ -22,22 +22,35 @@ class DefaultBenchTelemetryStep extends BenchTelemetryStep {
 }
 
 export default abstract class BlockchainModule {
-    abstract createBenchStep(benchConfig: any, logger: Logger): BenchStep;
+    private readonly _benchCasePath?: string;
 
-    createPrepareStep(commonConfig: any, moduleConfig: any, logger: Logger): PrepareStep {
-        return new DefaultPrepareStep(commonConfig, moduleConfig, logger);
+    constructor();
+    constructor(benchCasePath: string);
+    constructor(benchCasePath?: string) {
+        this._benchCasePath = benchCasePath;
     }
 
-    createBenchTelemetryStep(benchConfig: any, logger: Logger): BenchTelemetryStep {
-        return new DefaultBenchTelemetryStep(benchConfig, logger);
+    get benchCasePath(): string | undefined {
+        return this._benchCasePath;
+    }
+
+    createPreparationStep(commonConfig: any, moduleConfig: any, logger: Logger): Preparation {
+        return new DefaultPrepareStep(commonConfig, moduleConfig, logger);
     }
 
     abstract getConfigSchema(): any;
 
-    abstract getFileName(): string;
+// noinspection JSMethodCanBeStatic
+    createTelemetryStep(benchConfig: any, logger: Logger): Telemetry {
+        return new DefaultBenchTelemetryStep(benchConfig, logger);
+    }
 
-    // noinspection JSMethodCanBeStatic
+// noinspection JSMethodCanBeStatic
     getDefaultConfigFilePath(): string | null {
         return null;
+    }
+
+    bench(): Promise<any> {
+        return new BenchRunner(this).bench()
     }
 }

@@ -1,6 +1,6 @@
-import {PrepareStep} from "../../lib";
+import {Preparation} from "../../lib";
 
-export default class SimpleModulePrepareStep extends PrepareStep {
+export default class SimpleModulePreparation extends Preparation {
     async prepare() {
         await new Promise(resolve => setTimeout(resolve, 1000));
         return {hello: "world"};

@@ -9,7 +9,7 @@ export interface TelemetryData {
     benchTime: number,
 }
 
-export default abstract class BenchTelemetryStep extends Step {
+export default abstract class Telemetry extends Step {
 
     protected benchConfig: any;
 

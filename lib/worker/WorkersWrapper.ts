@@ -2,8 +2,8 @@ import {Worker} from "worker_threads";
 import Logger from "../resources/Logger";
 import getWorkerFilePath from "./BenchWorker";
 import PrometheusPusher from "../metrics/PrometheusPusher";
-import BlockchainModule from "../module/BlockchainModule";
-import BenchTelemetryStep, {TelemetryData} from "../module/steps/BenchTelemetryStep";
+import Telemetry, {TelemetryData} from "../module/steps/Telemetry";
+import Strings from "../resources/Strings";
 
 const FINISH_CHECKER_INTERVAL = 100;
 const PROMETHEUS_UPDATE_INTERVAL = 200;
@@ -14,13 +14,16 @@ export const WORKER_STATE_PREPARING = -2;
 export const WORKER_STATE_PREPARED = -1;
 export const WORKER_STATE_START = 0;
 
+export const WORKER_ERROR_DEFAULT = -1;
+export const WORKER_ERROR_NO_IMPLEMENTATION = -2;
+
 export default class WorkersWrapper {
     private readonly benchConfig: any;
     private readonly commonConfig: any;
     private readonly logger: Logger;
-    private readonly blockchainModule: BlockchainModule;
     private readonly workerFilePath: string;
     private readonly prometheusPusher?: PrometheusPusher;
+    private readonly benchCasePath: string;
 
     private lastPrometheusTrxs = 0;
     private processedTransactions = 0;
@@ -36,7 +39,7 @@ export default class WorkersWrapper {
     private readonly workers: Worker[];
     private readonly terminatedWorkers = new Map<Worker, boolean>();
 
-    private readonly benchTelemetryStep: BenchTelemetryStep;
+    private readonly benchTelemetryStep: Telemetry;
 
     private logInterval: any;
     private stopIfProcessedInterval: any;
@@ -44,19 +47,20 @@ export default class WorkersWrapper {
     private telemetryStepInterval: any;
 
     private benchError: any = null;
+    private wasStarted = false;
 
     private activeWorkers = 0;
     private benchResolve?: (value?: (PromiseLike<Promise<Promise<any>>> | Promise<Promise<any>>)) => void;
     private benchReject?: (reason?: any) => void;
 
-    constructor(blockchainModule: BlockchainModule,
-                benchTelemetryStep: BenchTelemetryStep,
+    constructor(benchCasePath: string,
+                benchTelemetryStep: Telemetry,
                 logger: Logger,
                 benchConfig: any,
                 commonConfig: any,
                 prometheusPusher?: PrometheusPusher) {
 
-        this.blockchainModule = blockchainModule;
+        this.benchCasePath = benchCasePath;
         this.benchTelemetryStep = benchTelemetryStep;
         this.benchConfig = benchConfig;
         this.logger = logger;
@@ -102,15 +106,19 @@ export default class WorkersWrapper {
             clearInterval(this.telemetryStepInterval);
 
         this.benchTelemetryStep.onBenchEnded(this.calcTelemetryStepData()).then(() => {
-            if (this.benchError)
-                console.log("Benchmark finished with error");
-            else
-                console.log("Benchmark finished successfully");
+            if (this.wasStarted) {
+                if (this.benchError)
+                    console.log("Benchmark finished with error");
+                else
+                    console.log("Benchmark finished successfully");
 
-            console.log(`Total processed: ${this.processedTransactions}`);
-            console.log(`Local tps: ${this.calcLocalTps()}`);
-            console.log(`Avg   tps: ${this.calcAvgTps()}`);
-            console.log("");
+                console.log(`Total processed: ${this.processedTransactions}`);
+                console.log(`Local tps: ${this.calcLocalTps()}`);
+                console.log(`Avg   tps: ${this.calcAvgTps()}`);
+                console.log("");
+            } else {
+                console.log("Could not start benchmark");
+            }
 
             if (this.benchError)
                 this.benchReject!(this.benchError);
@@ -177,7 +185,7 @@ export default class WorkersWrapper {
                 commonConfig: this.commonConfig,
                 sharedAvgTpsBuffer: this.sharedAvgTpsBuffer,
                 sharedTransProcessedBuffer: this.sharedTransProcessedBuffer,
-                blockchainModuleFileName: this.blockchainModule.getFileName()
+                benchCasePath: this.benchCasePath
             }
         });
 
@@ -221,6 +229,11 @@ export default class WorkersWrapper {
     }
 
     private startBench() {
+
+        // Log the start of blockchain
+        this.logger.log(Strings.log.startingBenchmark(this.commonConfig.threadsAmount));
+
+        this.wasStarted = true;
 
         this.benchStartTime = new Date().getTime();
 

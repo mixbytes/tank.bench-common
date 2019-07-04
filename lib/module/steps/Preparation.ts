@@ -1,7 +1,7 @@
 import Step from "./Step";
 import Logger from "../../resources/Logger";
 
-export default abstract class PrepareStep extends Step {
+export default abstract class Preparation extends Step {
 
     protected commonConfig: any;
     protected moduleConfig: any;
