@@ -7,7 +7,7 @@ export interface TransactionResult {
     error: any
 }
 
-export default abstract class BenchCase extends Step {
+export default abstract class BenchProfile extends Step {
 
     protected benchConfig: any;
 

@@ -23,7 +23,7 @@ export default class WorkersWrapper {
     private readonly logger: Logger;
     private readonly workerFilePath: string;
     private readonly prometheusPusher?: PrometheusPusher;
-    private readonly benchCasePath: string;
+    private readonly benchProfilePath: string;
 
     private lastPrometheusTrxs = 0;
     private processedTransactions = 0;
@@ -53,14 +53,14 @@ export default class WorkersWrapper {
     private benchResolve?: (value?: (PromiseLike<Promise<Promise<any>>> | Promise<Promise<any>>)) => void;
     private benchReject?: (reason?: any) => void;
 
-    constructor(benchCasePath: string,
+    constructor(benchProfilePath: string,
                 benchTelemetryStep: Telemetry,
                 logger: Logger,
                 benchConfig: any,
                 commonConfig: any,
                 prometheusPusher?: PrometheusPusher) {
 
-        this.benchCasePath = benchCasePath;
+        this.benchProfilePath = benchProfilePath;
         this.benchTelemetryStep = benchTelemetryStep;
         this.benchConfig = benchConfig;
         this.logger = logger;
@@ -88,7 +88,7 @@ export default class WorkersWrapper {
             this.benchReject = reject;
             this.activeWorkers = this.commonConfig.threadsAmount;
             for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-                this.addWorker();
+                this.addWorker(i);
             }
         })
     }
@@ -178,14 +178,15 @@ export default class WorkersWrapper {
         }
     }
 
-    private addWorker() {
+    private addWorker(iThreadId: number) {
         let worker = new Worker(this.workerFilePath, {
             workerData: {
                 benchConfig: this.benchConfig,
                 commonConfig: this.commonConfig,
                 sharedAvgTpsBuffer: this.sharedAvgTpsBuffer,
                 sharedTransProcessedBuffer: this.sharedTransProcessedBuffer,
-                benchCasePath: this.benchCasePath
+                benchProfilePath: this.benchProfilePath,
+                iThreadId: iThreadId
             }
         });
 

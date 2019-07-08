@@ -2,6 +2,7 @@ import Logger from "../resources/Logger";
 import Preparation from "./steps/Preparation";
 import Telemetry, {TelemetryData} from "./steps/Telemetry";
 import BenchRunner from "../runner/BenchRunner";
+import BuiltinBenchProfile from "./steps/BuiltinBenchProfile";
 
 class DefaultPrepareStep extends Preparation {
     async prepare(): Promise<any> {
@@ -22,16 +23,16 @@ class DefaultBenchTelemetryStep extends Telemetry {
 }
 
 export default abstract class BlockchainModule {
-    private readonly _benchCasePath?: string;
+    private readonly _benchProfilePath?: string;
 
     constructor();
-    constructor(benchCasePath: string);
-    constructor(benchCasePath?: string) {
-        this._benchCasePath = benchCasePath;
+    constructor(benchProfilePath: string);
+    constructor(benchProfilePath?: string) {
+        this._benchProfilePath = benchProfilePath;
     }
 
-    get benchCasePath(): string | undefined {
-        return this._benchCasePath;
+    get benchProfilePath(): string | undefined {
+        return this._benchProfilePath;
     }
 
     createPreparationStep(commonConfig: any, moduleConfig: any, logger: Logger): Preparation {
@@ -39,6 +40,11 @@ export default abstract class BlockchainModule {
     }
 
     abstract getConfigSchema(): any;
+
+// noinspection JSMethodCanBeStatic
+    getBuiltinProfiles(): BuiltinBenchProfile[] {
+        return [];
+    }
 
 // noinspection JSMethodCanBeStatic
     createTelemetryStep(benchConfig: any, logger: Logger): Telemetry {

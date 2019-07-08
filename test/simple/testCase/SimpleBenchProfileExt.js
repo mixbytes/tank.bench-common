@@ -1,14 +1,14 @@
-const {BenchCase} = require("../../../dist/lib/index");
+const {BenchProfile} = require("../../../dist/lib/index");
 
-class SimpleBenchCase extends BenchCase {
+class SimpleBenchProfileExt extends BenchProfile {
     async commitTransaction(uniqueData) {
         return new Promise(resolve => {
             let code = Math.random() > 0.5 ? 200 : 500;
             setTimeout(() => {
                 resolve({code: code, error: null})
-            }, 100);
+            }, 10);
         });
     }
 }
 
-module.exports = SimpleBenchCase;
+module.exports = SimpleBenchProfileExt;

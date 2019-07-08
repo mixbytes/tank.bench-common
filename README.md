@@ -84,7 +84,7 @@ own purpose.
 
 The main goal of the `PrepareStep` is to commit preparation transactions like accounts creation. Do this job in the
 `prepare` method, returning **Promise**. The object returned from this promise will be used as config for the next step,
-the **BenchCase**
+the **BenchProfile**
 
 #### TelemetryStep
 
@@ -98,9 +98,9 @@ the **BenchCase**
 This step can be used if you want to have your own telemetry (not using built-in **prometheus** one), or just to do
 logging stuff.
 
-### BenchCase
+### BenchProfile
 
-`BenchCase` is a class that describes what load transactions to commit. 
+`BenchProfile` is a class that describes what load transactions to commit. 
 It provides `commitTransaction` method, in which you
 can commit transactions. Important part of this step that it will be instantiated as many times as provided in config
 via **threadsAmount** parameter, each in it's own **worker_thread**. Also, you need too remember
@@ -110,10 +110,10 @@ You should return Promise from `commitTransaction` method, and transaction will 
 when you resolve this promise.
 In this promise you have to specify **responseCode** or **error** to use telemetry correctly.
 
-Both `Preparation` and `BenchCase` provide `asyncConstruct` method to implement. No methods will be called in
+Both `Preparation` and `BenchProfile` provide `asyncConstruct` method to implement. No methods will be called in
 your implementation before the promise you returned become resolved. This may be useful.
 
-Your `BenchCase` implementation class should be written in a separate file, exporting class that overrides `BenchCase`
+Your `BenchProfile` implementation class should be written in a separate file, exporting class that overrides `BenchProfile`
 base class. Than you should pass it as command line argument.
 
 
@@ -125,11 +125,11 @@ After you implemented all required interfaces, to run the bench, just do the fol
 new MyModule().bench().then(e => console.log(e));
 ```
 
-Note that you must specify at least one command line argument - the name of `BenchCase` implementation file.
+Note that you must specify at least one command line argument - the name of `BenchProfile` implementation file.
 Like this:
 
 ```bash
-npm start -- -case="./MyGreatCase"
+npm start -- -p="./MyGreatProfile"
 ```
 
 It will start benchmark, starting with `Preparation`. If any error occurred, it will stop and log the error.
@@ -147,7 +147,7 @@ module config from **module.bench.config.json**. You can override this logic in 
 Also you can provide arguments to the programm overriding default paths of configuration. The are **--commonconfig** 
 and **--moduleconfig** (and their short versions, **-cc** and **-mc**).
 
-For example, `npm start -- -case="./MyGreatCase" -mc=mymodule.json` will get module config from `mymodule.json` file.
+For example, `npm start -- -p="./MyGreatProfile" -mc=mymodule.json` will get module config from `mymodule.json` file.
 
 #### Common code configuration
 

@@ -43,7 +43,7 @@ export default class BenchRunner {
         await benchTelemetryStep.asyncConstruct();
 
         await new WorkersWrapper(
-            this.config.benchCasePath,
+            this.config.benchProfilePath,
             benchTelemetryStep,
             this.logger,
             benchConfig,

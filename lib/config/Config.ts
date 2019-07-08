@@ -6,7 +6,7 @@ import * as convict from "convict";
 export default class Config {
     private readonly _commonConfig: any;
     private readonly _moduleConfig: any;
-    private readonly _benchCasePath: string;
+    private readonly _benchProfilePath: string;
 
     constructor(blockchainModule: BlockchainModule) {
 
@@ -26,14 +26,26 @@ export default class Config {
             moduleConfigFilePath = tmp;
         }
 
-        if (blockchainModule.benchCasePath) {
-            this._benchCasePath = blockchainModule.benchCasePath;
+        this._benchProfilePath = "";
+        if (blockchainModule.benchProfilePath) {
+            this._benchProfilePath = blockchainModule.benchProfilePath;
         } else {
-            tmp = Config.processArg(Strings.constants.benchCaseFilePathArgs());
+            tmp = Config.processArg(Strings.constants.benchProfileFilePathArgs());
             if (tmp) {
-                this._benchCasePath = tmp;
+                let profilePath = null;
+                for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
+                    let c = blockchainModule.getBuiltinProfiles()[i];
+                    if (c.name === tmp) {
+                        profilePath = c.fileName;
+                    }
+                }
+                if (!profilePath)
+                    this._benchProfilePath = tmp;
+                else
+                    this._benchProfilePath = profilePath
             } else {
-                throw new Error("You need to specify the bench case (using -case=<case_file> flag)");
+                if (blockchainModule)
+                    throw new Error("You need to specify the bench profile (using -p=<case_file> or --profile=<builtin_case_name> flag)");
             }
         }
 
@@ -62,8 +74,8 @@ export default class Config {
         this._moduleConfig = moduleConvict.getProperties();
     }
 
-    get benchCasePath(): string {
-        return this._benchCasePath;
+    get benchProfilePath(): string {
+        return this._benchProfilePath;
     }
 
     static getConvictDocumentation = (convict: convict.Config<any>) => {

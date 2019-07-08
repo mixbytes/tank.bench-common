@@ -27,8 +27,8 @@ const Strings = {
         moduleConfigFilePathArgs: () =>
             ["-mc=", "--module-config="],
 
-        benchCaseFilePathArgs: () =>
-            ["-case=", "--bench-case="],
+        benchProfileFilePathArgs: () =>
+            ["-case=", "--bench-case=", "-p=", "--profile="],
 
         commonConfigFilePath: () =>
             `./bench.config.json`,
