@@ -1,16 +1,29 @@
 import SimpleModule from "./simple/SimpleModule";
 
-test("Simple internal test", async cb => {
-    process.argv = ["-p=SimpleBenchProfile"];
+const testBench = async (cb: jest.DoneCallback) => {
     jest.setTimeout(99999999);
     await new SimpleModule().bench();
     cb();
+};
+
+// test("Error internal test", async cb => {
+//     process.argv = ["-p=error"];
+//     await testBench(cb);
+// });
+
+test("Simple default internal test", async cb => {
+    process.argv = [];
+    await testBench(cb);
 });
 
+test("Simple internal test", async cb => {
+    process.argv = ["-p=SimpleBenchProfile"];
+    await testBench(cb);
+});
 
 test("Simple external test", async cb => {
     process.argv = ["-p=./test/simple/testCase/SimpleBenchProfileExt.js"];
-    jest.setTimeout(99999999);
-    await new SimpleModule().bench();
-    cb();
+    await testBench(cb);
 });
+
+

@@ -1,12 +1,7 @@
 import {isMainThread, parentPort, workerData} from "worker_threads";
 import Logger from "../resources/Logger";
 import BenchProfile, {TransactionResult} from "../module/steps/BenchProfile";
-import {
-    WORKER_ERROR_DEFAULT,
-    WORKER_STATE_PREPARED,
-    WORKER_STATE_PREPARING,
-    WORKER_STATE_START
-} from "./WorkersWrapper";
+import {WORKER_ERROR_DEFAULT, WORKER_STATE_ERROR, WORKER_STATE_PREPARED} from "./WorkersWrapper";
 import {resolve} from "path";
 
 export default function getWorkerFilePath() {
@@ -73,14 +68,17 @@ class Bench {
 
         Atomics.store(this.sharedTransProcessedArray, this.iThreadId, WORKER_STATE_PREPARED);
 
-        parentPort!.postMessage({method: "onReady"});
+        parentPort!.postMessage({method: "onReady", id: this.iThreadId});
 
-        Atomics.wait(this.sharedTransProcessedArray, this.iThreadId, WORKER_STATE_START);
+        // Atomics.wait(this.sharedTransProcessedArray, this.iThreadId, WORKER_STATE_START);
 
         for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-            if (Atomics.load(this.sharedTransProcessedArray, i) == WORKER_STATE_PREPARING) {
+            Atomics.wait(this.sharedTransProcessedArray, this.iThreadId, WORKER_STATE_PREPARED);
+        }
+
+        for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+            if (Atomics.load(this.sharedTransProcessedArray, i) === WORKER_STATE_ERROR)
                 return;
-            }
         }
 
         this.benchRunning = true;
@@ -131,6 +129,7 @@ class Bench {
 
         parentPort!.postMessage({
             method: "onTransaction",
+            id: this.iThreadId,
             respCode: trRes.code,
             trDuration
         });
@@ -184,9 +183,15 @@ class Bench {
 if (!isMainThread) {
     new Bench().startBench()
         .then(() => {
-            parentPort!.postMessage({method: "onStopBenchmark"});
+            parentPort!.postMessage({method: "onStopBenchmark", id: workerData.iThreadId});
         })
         .catch(e => {
-            parentPort!.postMessage({method: "onError", error: e ? (e.stack ? e.stack : e.toString()) : null});
+            parentPort!.postMessage(
+                {
+                    method: "onError",
+                    id: workerData.iThreadId,
+                    error: e ? (e.stack ? e.stack : e.toString()) : null
+                }
+            );
         });
 }

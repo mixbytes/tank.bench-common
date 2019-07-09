@@ -4,7 +4,7 @@ export default class SimpleBenchProfile extends BenchProfile {
 
     static readonly benchProfile: BuiltinBenchProfile = {
         fileName: __filename,
-        name: "SimpleBenchProfile"
+        name: "default"
     };
 
     commitTransaction(uniqueData: string): Promise<TransactionResult> {

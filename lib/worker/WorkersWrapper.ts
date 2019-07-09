@@ -12,6 +12,7 @@ const LAST_TRXS_AMOUNT_FOR_LOCAL_TPS = 20;
 
 export const WORKER_STATE_PREPARING = -2;
 export const WORKER_STATE_PREPARED = -1;
+export const WORKER_STATE_ERROR = -3;
 export const WORKER_STATE_START = 0;
 
 export const WORKER_ERROR_DEFAULT = -1;
@@ -144,10 +145,25 @@ export default class WorkersWrapper {
                 this.benchError = message.error;
                 if (this.stopIfProcessedInterval)
                     clearInterval(this.stopIfProcessedInterval);
+
                 worker.terminate(() => {
                     this.onWorkerTerminate();
                 });
                 this.terminatedWorkers.set(worker, true);
+
+                if (!this.wasStarted) {
+                    Atomics.store(this.sharedTransProcessedArray, message.id, WORKER_STATE_ERROR);
+                    for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+                        if (Atomics.load(this.sharedTransProcessedArray, i) == WORKER_STATE_PREPARING)
+                            return;
+                    }
+                    for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+                        if (Atomics.load(this.sharedTransProcessedArray, i) == WORKER_STATE_PREPARED)
+                            Atomics.store(this.sharedTransProcessedArray, i, WORKER_STATE_START);
+                        Atomics.notify(this.sharedTransProcessedArray, i, this.commonConfig.threadsAmount);
+                    }
+                    return;
+                }
                 this.stopBench();
                 break;
             case "onTransaction":
@@ -165,11 +181,13 @@ export default class WorkersWrapper {
                 break;
             case "onReady":
                 for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-                    if (Atomics.load(this.sharedTransProcessedArray, i) != WORKER_STATE_PREPARED)
+                    if (Atomics.load(this.sharedTransProcessedArray, i) == WORKER_STATE_PREPARING)
                         return;
                 }
                 for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-                    Atomics.store(this.sharedTransProcessedArray, i, WORKER_STATE_START)
+                    if (Atomics.load(this.sharedTransProcessedArray, i) == WORKER_STATE_PREPARED)
+                        Atomics.store(this.sharedTransProcessedArray, i, WORKER_STATE_START);
+                    Atomics.notify(this.sharedTransProcessedArray, i, this.commonConfig.threadsAmount);
                 }
                 this.startBench();
                 break;
@@ -199,6 +217,9 @@ export default class WorkersWrapper {
     }
 
     private stopBench() {
+        // for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+        //     Atomics.notify(this.sharedTransProcessedArray, i, this.commonConfig.threadsAmount);
+        // }
         this.workers.forEach(worker => {
             if (!this.terminatedWorkers.get(worker)) {
                 worker.postMessage({method: "stopBenchmark"});

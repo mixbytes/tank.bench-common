@@ -6,7 +6,7 @@ class SimpleBenchProfileExt extends BenchProfile {
             let code = Math.random() > 0.5 ? 200 : 500;
             setTimeout(() => {
                 resolve({code: code, error: null})
-            }, 10);
+            }, 1);
         });
     }
 }

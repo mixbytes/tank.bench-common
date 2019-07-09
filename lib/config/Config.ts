@@ -16,38 +16,17 @@ export default class Config {
         let moduleConfigFilePath = moduleDefaultConfigFilePath ?
             moduleDefaultConfigFilePath : Strings.constants.moduleConfigFilePath();
 
-        let tmp = Config.processArg(Strings.constants.commonConfigFilePathArgs());
-        if (tmp) {
-            commonConfigFilePath = tmp;
+        let arg = Config.processArg(Strings.constants.commonConfigFilePathArgs());
+        if (arg) {
+            commonConfigFilePath = arg;
         }
 
-        tmp = Config.processArg(Strings.constants.moduleConfigFilePathArgs());
-        if (tmp) {
-            moduleConfigFilePath = tmp;
+        arg = Config.processArg(Strings.constants.moduleConfigFilePathArgs());
+        if (arg) {
+            moduleConfigFilePath = arg;
         }
 
-        this._benchProfilePath = "";
-        if (blockchainModule.benchProfilePath) {
-            this._benchProfilePath = blockchainModule.benchProfilePath;
-        } else {
-            tmp = Config.processArg(Strings.constants.benchProfileFilePathArgs());
-            if (tmp) {
-                let profilePath = null;
-                for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
-                    let c = blockchainModule.getBuiltinProfiles()[i];
-                    if (c.name === tmp) {
-                        profilePath = c.fileName;
-                    }
-                }
-                if (!profilePath)
-                    this._benchProfilePath = tmp;
-                else
-                    this._benchProfilePath = profilePath
-            } else {
-                if (blockchainModule)
-                    throw new Error("You need to specify the bench profile (using -p=<case_file> or --profile=<builtin_case_name> flag)");
-            }
-        }
+        this._benchProfilePath = Config.getBenchProfilePath(blockchainModule);
 
         const commonConvict = convict(CommonConfigSchema);
         commonConvict.loadFile(commonConfigFilePath);
@@ -72,6 +51,34 @@ export default class Config {
             throw e;
         }
         this._moduleConfig = moduleConvict.getProperties();
+    }
+
+    private static getBenchProfilePath(blockchainModule: BlockchainModule): string {
+        if (blockchainModule.benchProfilePath)
+            return blockchainModule.benchProfilePath;
+
+        let arg = Config.processArg(Strings.constants.benchProfileFilePathArgs());
+
+        if (arg) {
+            for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
+                let c = blockchainModule.getBuiltinProfiles()[i];
+                if (c.name === arg) {
+                    return c.fileName;
+                }
+            }
+            return arg;
+        }
+
+        for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
+            let c = blockchainModule.getBuiltinProfiles()[i];
+            if (c.name === "default") {
+                console.warn("The default bench profile is used!");
+                console.warn("You can specify the bench profile (using -p=<case_file> or --profile=<builtin_case_name> flag)");
+                return c.fileName;
+            }
+        }
+
+        throw new Error("You need to specify the bench profile (using -p=<case_file> or --profile=<builtin_case_name> flag)");
     }
 
     get benchProfilePath(): string {

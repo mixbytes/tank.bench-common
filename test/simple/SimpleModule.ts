@@ -1,6 +1,9 @@
 import {BlockchainModule, BuiltinBenchProfile, Logger, Preparation} from "../../lib";
 import SimpleModulePreparation from "./SimpleModulePreparation";
+
 import SimpleBenchProfile from "./SimpleBenchProfile";
+import DefaultBenchProfile from "./DefaultBenchProfile";
+import ErrorBenchProfile from "./ErrorBenchProfile";
 
 
 export default class SimpleModule extends BlockchainModule {
@@ -10,7 +13,11 @@ export default class SimpleModule extends BlockchainModule {
     }
 
     getBuiltinProfiles(): BuiltinBenchProfile[] {
-        return [SimpleBenchProfile.benchProfile]
+        return [
+            SimpleBenchProfile.benchProfile,
+            DefaultBenchProfile.benchProfile,
+            ErrorBenchProfile.benchProfile
+        ]
     }
 
     getConfigSchema(): any {
