@@ -95,5 +95,19 @@ export default {
         format: "int",
         default: null,
         doc: "amount of threads to perform transfer transactions"
+    },
+    sharding: {
+        shards: {
+            arg: 'sharding.shards',
+            format: "int",
+            default: -1,
+            doc: "amount of shards that run the benchmark simultaneously"
+        },
+        shardId: {
+            arg: 'sharding.shardId',
+            format: "int",
+            default: -1,
+            doc: "id of shard from shards that run the benchmark simultaneously"
+        }
     }
 };
