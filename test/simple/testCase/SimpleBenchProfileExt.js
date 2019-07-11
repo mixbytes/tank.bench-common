@@ -11,4 +11,7 @@ class SimpleBenchProfileExt extends BenchProfile {
     }
 }
 
-module.exports = SimpleBenchProfileExt;
+module.exports = {
+    fileName: __filename,
+    benchProfile: SimpleBenchProfileExt
+};

@@ -1,6 +1,6 @@
 {
   "name": "tank.bench-common",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Common part for tank bench modules",
   "license": "Apache-2.0",
   "repository": {

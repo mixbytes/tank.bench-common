@@ -1,8 +1,6 @@
-import {BenchProfile, TransactionResult} from "../../lib";
+import {BenchProfile, Profile, TransactionResult} from "../../lib";
 
-export default class ErrorBenchProfile extends BenchProfile {
-
-    static readonly fileName = __filename;
+class ErrorProfile extends BenchProfile {
 
     async asyncConstruct(threadId: number) {
         if (threadId == this.benchConfig.commonConfig.threadsAmount - 1)
@@ -18,3 +16,12 @@ export default class ErrorBenchProfile extends BenchProfile {
         });
     }
 }
+
+const profile: Profile = {
+    fileName: __filename,
+    benchProfile: ErrorProfile,
+    preparationProfile: undefined,
+    telemetryProfile: undefined
+};
+
+export default profile;

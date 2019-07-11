@@ -3,6 +3,7 @@ import Logger from "../resources/Logger";
 import BenchProfile, {TransactionResult} from "../module/steps/BenchProfile";
 import {WORKER_ERROR_DEFAULT, WORKER_STATE_ERROR, WORKER_STATE_PREPARED} from "./WorkersWrapper";
 import {resolve} from "path";
+import Profile from "../module/Profile";
 
 export default function getWorkerFilePath() {
     return __filename;
@@ -28,7 +29,7 @@ class Bench {
     benchError: any;
     sleepCoef = 1;
 
-    readonly benchProfilePath = workerData.benchProfilePath;
+    readonly profilePath = workerData.profilePath;
 
     readonly iThreadId = workerData.iThreadId;
 
@@ -57,12 +58,15 @@ class Bench {
     }
 
     async startBench() {
-        let benchProfileImport = await import(resolve(this.benchProfilePath));
-        if (benchProfileImport.default) {
-            this.benchProfile = <BenchProfile>new benchProfileImport.default(this.benchConfig, new Logger(this.commonConfig));
+        let profileImport = await import(resolve(this.profilePath));
+        let profile: Profile;
+        if (profileImport.default) {
+            profile = <Profile>profileImport.default;
         } else {
-            this.benchProfile = <BenchProfile>new benchProfileImport(this.benchConfig, new Logger(this.commonConfig));
+            profile = <Profile>profileImport;
         }
+
+        this.benchProfile = new profile.benchProfile(this.benchProfile, new Logger(this.commonConfig));
 
         await this.benchProfile.asyncConstruct(this.iThreadId, this.benchConfig);
 

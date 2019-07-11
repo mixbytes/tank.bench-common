@@ -43,26 +43,22 @@ configuration file.
 
 
 ```typescript
-import {BlockchainModule, BuiltinProfile, PreparationProfile, Telemerty} from "tank.bench-common"
+import {BlockchainModule, BuiltinProfile} from "tank.bench-common"
 
 export default class SimpleModule extends BlockchainModule {
     getBuiltinProfiles(): BuiltinProfile[] {
-        return [
-            {
-                benchFile: DefaultBenchProfile.fileName,
-                preparationFile: DefaultPreparationProfile.fileName,
-                telemetryFile: null,
-                name: "default"
-            },
-
-            {
-                benchFile: SuperBenchProfile.fileName,
-                preparationFile: null,
-                telemetryFile: DefaultTelemetryProfile.fileName,
-                name: "SuperProfile"
-            },
-        ]
-    }
+            return [
+                {
+                    profile: DefaultBenchProfile,
+                    name: "default"
+                },
+    
+                {
+                    profile: AwesomeBenchProfile,
+                    name: "AwesomeBenchProfile"
+                },
+            ]
+        }
 
     getConfigSchema(): any {
         return {
@@ -81,14 +77,15 @@ export default class SimpleModule extends BlockchainModule {
 
 ### What is profile?
 
-Profile is a set of files, containing one class in each other. There are 3 parts of a profile - **preparation**,
-**telemetry** and **bench (required)**. Other parts are optional.
+Profile is a set of classes, that are called the **parts** of profile. There are 3 parts of a profile - **preparation**,
+**telemetry** and **bench**. Bench is required part, other parts are optional.
 
 Profile specifies the code that will be run on concrete time and thread.
 
 Every class that is part of profile provide `asyncConstruct` method to implement. No methods will be called in
 your implementation before the promise you returned become resolved. This may be useful.
 
+Also profile contatins name of file that is exported from it. It is used to get **worker_threads** to work.
 
 #### Preparation
 
@@ -136,14 +133,7 @@ So when you start bench like this:
 npm start -- -p="./MyGreatProfile"
 ```
 
-It means, that it has to use preparation part from "MyGreatProfile.js" file, default bench part and default telemetry part.
-
-Here is the list of flags:
-
-* **-p=** flag is used to specify **preparation** part
-* **-b=** flag is used to specify **bench** part
-* **-t=** flag is used to specify **telemetry** part
-* **-n=** flag is used to specify all parts if using builtin profile. So you provide the name of profile after "=" sign.
+It means, that it has to use profile exported from "MyGreatProfile.js" file, default bench part and default telemetry part.
 
 ### How to run?
 
@@ -157,7 +147,7 @@ Note that you must specify at least one command line argument - the name of `Ben
 Like this:
 
 ```bash
-npm start -- -b="./MyGreatBenchProfile"
+npm start -- -p="./MyGreatProfile"
 ```
 
 It will start benchmark, starting with `PreparationProfile`. If any error occurred, it will stop and log the error.
@@ -175,7 +165,7 @@ module config from **module.bench.config.json**. You can override this logic in 
 Also you can provide arguments to the programm overriding default paths of configuration. The are **--commonconfig** 
 and **--moduleconfig** (and their short versions, **-cc** and **-mc**).
 
-For example, `npm start -- -b="./MyGreatBenchProfile" -mc=mymodule.json` will get module config from `mymodule.json` file.
+For example, `npm start -- -p="./MyGreatProfile" -mc=mymodule.json` will get module config from `mymodule.json` file.
 
 #### Common code configuration
 

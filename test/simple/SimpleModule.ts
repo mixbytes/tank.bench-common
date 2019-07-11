@@ -1,32 +1,24 @@
 import {BlockchainModule, BuiltinProfile} from "../../lib";
-import DefaultPreparationProfile from "./DefaultPreparationProfile";
 
-import SimpleBenchProfile from "./SimpleBenchProfile";
-import DefaultBenchProfile from "./DefaultBenchProfile";
-import ErrorBenchProfile from "./ErrorBenchProfile";
-
+import SimpleBenchProfile from "./SimpleProfile";
+import ErrorBenchProfile from "./ErrorProfile";
+import DefaultBenchProfile from "./DefaultProfile"
 
 export default class SimpleModule extends BlockchainModule {
     getBuiltinProfiles(): BuiltinProfile[] {
         return [
             {
-                preparationFile: DefaultPreparationProfile.fileName,
-                benchFile: DefaultBenchProfile.fileName,
-                telemetryFile: null,
+                profile: DefaultBenchProfile,
                 name: "default"
             },
 
             {
-                preparationFile: DefaultPreparationProfile.fileName,
-                benchFile: SimpleBenchProfile.fileName,
-                telemetryFile: null,
+                profile: SimpleBenchProfile,
                 name: "SimpleBenchProfile"
             },
 
             {
-                preparationFile: DefaultPreparationProfile.fileName,
-                benchFile: ErrorBenchProfile.fileName,
-                telemetryFile: null,
+                profile: ErrorBenchProfile,
                 name: "error"
             },
         ]

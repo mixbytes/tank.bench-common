@@ -3,8 +3,6 @@ import Logger from "../../resources/Logger";
 
 export default class PreparationProfile extends Step {
 
-    static readonly fileName = __filename;
-
     protected commonConfig: any;
     protected moduleConfig: any;
 

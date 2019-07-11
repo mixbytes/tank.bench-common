@@ -11,8 +11,6 @@ export interface TelemetryData {
 
 export default class TelemetryProfile extends Step {
 
-    static readonly fileName = __filename;
-
     protected benchConfig: any;
 
     constructor(benchConfig: any, logger: Logger) {

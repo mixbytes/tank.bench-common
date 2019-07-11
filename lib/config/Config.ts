@@ -2,164 +2,67 @@ import BlockchainModule from "../module/BlockchainModule";
 import Strings from "../resources/Strings";
 import CommonConfigSchema from "./CommonConfigSchema";
 import * as convict from "convict";
-import PreparationProfile from "../module/steps/PreparationProfile";
+import Profile from "../module/Profile";
+import {resolve} from "path";
 import TelemetryProfile from "../module/steps/TelemetryProfile";
-import BuiltinProfile from "../module/steps/BuiltinProfile";
+import PreparationProfile from "../module/steps/PreparationProfile";
 
 export default class Config {
-    private readonly _commonConfig: any;
-    private readonly _moduleConfig: any;
-    private readonly _benchProfilePath: string;
-    private readonly _preparationProfilePath: string;
-    private readonly _telemetryProfilePath: string;
+    private _commonConfig: any;
+    private _moduleConfig: any;
+    private _profile!: Profile;
 
-    constructor(blockchainModule: BlockchainModule) {
-
-        let moduleDefaultConfigFilePath = blockchainModule.getDefaultConfigFilePath();
-
-        let commonConfigFilePath = Strings.constants.commonConfigFilePath();
-        let moduleConfigFilePath = moduleDefaultConfigFilePath ?
-            moduleDefaultConfigFilePath : Strings.constants.moduleConfigFilePath();
-
-        let arg = Config.processArg(Strings.constants.commonConfigFilePathArgs());
-        if (arg) {
-            commonConfigFilePath = arg;
-        }
-
-        arg = Config.processArg(Strings.constants.moduleConfigFilePathArgs());
-        if (arg) {
-            moduleConfigFilePath = arg;
-        }
-
-        this._benchProfilePath = Config.getBenchProfilePath(blockchainModule);
-        this._preparationProfilePath = Config.getPreparationProfilePath(blockchainModule);
-        this._telemetryProfilePath = Config.getTelemetryProfilePath(blockchainModule);
-
-        const commonConvict = convict(CommonConfigSchema);
-        commonConvict.loadFile(commonConfigFilePath);
-        try {
-            commonConvict.validate({allowed: "strict"});
-        } catch (e) {
-            console.error("There is an error in the config of common module. Here is a schema:\n");
-            console.error(Config.getConvictDocumentation(commonConvict));
-            throw e;
-        }
-        this._commonConfig = commonConvict.getProperties();
-
-        this.validateCommonConfig();
-
-        const moduleConvict = convict(blockchainModule.getConfigSchema());
-        moduleConvict.loadFile(moduleConfigFilePath);
-        try {
-            moduleConvict.validate({allowed: "strict"});
-        } catch (e) {
-            console.error("There is an error in the config of your module. Here is a schema:\n");
-            console.error(Config.getConvictDocumentation(moduleConvict));
-            throw e;
-        }
-        this._moduleConfig = moduleConvict.getProperties();
+    get profile(): Profile {
+        return this._profile;
     }
 
-    get preparationProfilePath(): string {
-        return this._preparationProfilePath;
-    }
-
-    get telemetryProfilePath(): string {
-        return this._telemetryProfilePath;
-    }
-
-    private static getProfilePath(blockchainModule: BlockchainModule,
-                                  args: string[],
-                                  fieldName: string,
-                                  helpName: string,
-                                  helpFlags: string[],
-                                  checkNull: string | null
-    ) {
-        let useProfile = (profile: BuiltinProfile) => {
-            // @ts-ignore
-            let defaultField = profile[fieldName];
-
-            if (checkNull == null)
-                return defaultField;
-
-            if (defaultField === null) {
-                console.warn(`${helpName} implementation is default for tank!`);
-                return checkNull;
-            }
-
-            return defaultField;
-        };
-
-        let arg = Config.processArg(Strings.constants.commonProfileFilePathArgs());
+    private static async getProfile(blockchainModule: BlockchainModule): Promise<Profile> {
+        let arg = Config.processArg(Strings.constants.benchProfileFilePathArgs());
         if (arg) {
             for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
-                let profile = blockchainModule.getBuiltinProfiles()[i];
-                if (profile.name === arg) {
-                    return useProfile(profile)
+                let builtinProfile = blockchainModule.getBuiltinProfiles()[i];
+                if (builtinProfile.name === arg) {
+                    return builtinProfile.profile;
                 }
             }
-            return arg;
-        }
 
-        arg = Config.processArg(args);
-        if (arg) {
+            let profileImport = await import(resolve(arg));
+            let profile: Profile;
+            if (profileImport.default) {
+                profile = profileImport.default;
+            } else {
+                profile = profileImport;
+            }
+
             for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
-                let profile = blockchainModule.getBuiltinProfiles()[i];
-                if (profile.name === arg) {
-                    return useProfile(profile)
+                let builtinProfile = blockchainModule.getBuiltinProfiles()[i];
+                if (builtinProfile.name === "default") {
+                    if (!profile.preparationProfile) {
+                        profile.preparationProfile = builtinProfile.profile.preparationProfile;
+                        console.warn(`The PREPARATION profile is taken from default profile!`);
+                    }
+                    if (!profile.telemetryProfile) {
+                        profile.telemetryProfile = builtinProfile.profile.telemetryProfile;
+                        console.warn(`The TELEMETRY profile is taken from default profile!`);
+                    }
                 }
             }
-            return arg;
+
+            return profile;
         }
 
         for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
-            let profile = blockchainModule.getBuiltinProfiles()[i];
-            if (profile.name === "default") {
-                console.warn(`The default ${helpName} profile is used!`);
-                console.warn(`You can specify the ${helpName} profile (using ${helpFlags.reduce((hf, acc, i) => `${hf}${acc}${i !== helpFlags.length - 1 ? " or " : ""}`, "")} flag)`);
-                return useProfile(profile)
+            let builtinProfile = blockchainModule.getBuiltinProfiles()[i];
+            if (builtinProfile.name === "default") {
+                console.warn(`The default profile is used!`);
+                console.warn(`You can specify the profile (using -p or --profile flag)`);
+                return builtinProfile.profile;
             }
         }
 
-        throw new Error("You need to specify the BENCH profile (using -b=<bench_profile_file> or --bench-profile=<bench_profile_file> flag)");
+        throw new Error("You need to specify the profile (using -p or --profile flag)");
     }
 
-    private static getBenchProfilePath(blockchainModule: BlockchainModule) {
-        return Config.getProfilePath(
-            blockchainModule,
-            Strings.constants.benchProfileFilePathArgs(),
-            "benchFile",
-            "BENCH",
-            ["-b=<bench_profile_file>", "--bench-profile=<bench_profile_file>"],
-            null
-        )
-    }
-
-    get benchProfilePath(): string {
-        return this._benchProfilePath;
-    }
-
-    private static getPreparationProfilePath(blockchainModule: BlockchainModule) {
-        return Config.getProfilePath(
-            blockchainModule,
-            Strings.constants.preparationProfileFilePathArgs(),
-            "preparationFile",
-            "PREPARATION",
-            ["-p=<preparation_profile_file>", "--preparation-profile=<preparation_profile_file>"],
-            PreparationProfile.fileName
-        )
-    }
-
-    private static getTelemetryProfilePath(blockchainModule: BlockchainModule) {
-        return Config.getProfilePath(
-            blockchainModule,
-            Strings.constants.telemetryProfileFilePathArgs(),
-            "telemetryFile",
-            "TELEMETRY",
-            ["-t=<telemetry_profile_file>", "--telemetry-profile=<telemetry_profile_file>"],
-            TelemetryProfile.fileName
-        )
-    }
 
     static getConvictDocumentation = (convict: convict.Config<any>) => {
         let documentation = "";
@@ -185,6 +88,59 @@ export default class Config {
 
     getModuleConfig(): any {
         return {...this._moduleConfig};
+    }
+
+    async init(blockchainModule: BlockchainModule) {
+
+        let moduleDefaultConfigFilePath = blockchainModule.getDefaultConfigFilePath();
+
+        let commonConfigFilePath = Strings.constants.commonConfigFilePath();
+        let moduleConfigFilePath = moduleDefaultConfigFilePath ?
+            moduleDefaultConfigFilePath : Strings.constants.moduleConfigFilePath();
+
+        let arg = Config.processArg(Strings.constants.commonConfigFilePathArgs());
+        if (arg) {
+            commonConfigFilePath = arg;
+        }
+
+        arg = Config.processArg(Strings.constants.moduleConfigFilePathArgs());
+        if (arg) {
+            moduleConfigFilePath = arg;
+        }
+
+        this._profile = {...await Config.getProfile(blockchainModule)};
+        if (!this._profile.telemetryProfile) {
+            console.warn(`The default TELEMETRY profile is used!`);
+            this._profile.telemetryProfile = TelemetryProfile;
+        }
+        if (!this._profile.preparationProfile) {
+            console.warn(`The default PREPARATION profile is used!`);
+            this._profile.preparationProfile = PreparationProfile;
+        }
+
+        const commonConvict = convict(CommonConfigSchema);
+        commonConvict.loadFile(commonConfigFilePath);
+        try {
+            commonConvict.validate({allowed: "strict"});
+        } catch (e) {
+            console.error("There is an error in the config of common module. Here is a schema:\n");
+            console.error(Config.getConvictDocumentation(commonConvict));
+            throw e;
+        }
+        this._commonConfig = commonConvict.getProperties();
+
+        this.validateCommonConfig();
+
+        const moduleConvict = convict(blockchainModule.getConfigSchema());
+        moduleConvict.loadFile(moduleConfigFilePath);
+        try {
+            moduleConvict.validate({allowed: "strict"});
+        } catch (e) {
+            console.error("There is an error in the config of your module. Here is a schema:\n");
+            console.error(Config.getConvictDocumentation(moduleConvict));
+            throw e;
+        }
+        this._moduleConfig = moduleConvict.getProperties();
     }
 
     private static processArg(argVariants: string[]): string | null {

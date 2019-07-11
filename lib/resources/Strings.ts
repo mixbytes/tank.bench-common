@@ -31,16 +31,7 @@ const Strings = {
             ["-mc=", "--module-config="],
 
         benchProfileFilePathArgs: () =>
-            ["-b=", "--bench-profile="],
-
-        preparationProfileFilePathArgs: () =>
-            ["-p=", "--preparation-profile="],
-
-        telemetryProfileFilePathArgs: () =>
-            ["-t=", "--telemetry-profile="],
-
-        commonProfileFilePathArgs: () =>
-            ["-case=", "-n=", "--profile-name="],
+            ["-case=", "-p=", "--profile="],
 
         commonConfigFilePath: () =>
             `./bench.config.json`,

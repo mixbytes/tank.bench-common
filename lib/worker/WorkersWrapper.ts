@@ -24,7 +24,7 @@ export default class WorkersWrapper {
     private readonly logger: Logger;
     private readonly workerFilePath: string;
     private readonly prometheusPusher?: PrometheusPusher;
-    private readonly benchProfilePath: string;
+    private readonly profilePath: string;
 
     private lastPrometheusTrxs = 0;
     private processedTransactions = 0;
@@ -54,14 +54,14 @@ export default class WorkersWrapper {
     private benchResolve?: (value?: (PromiseLike<Promise<Promise<any>>> | Promise<Promise<any>>)) => void;
     private benchReject?: (reason?: any) => void;
 
-    constructor(benchProfilePath: string,
+    constructor(profilePath: string,
                 telemetryProfile: TelemetryProfile,
                 logger: Logger,
                 benchConfig: any,
                 commonConfig: any,
                 prometheusPusher?: PrometheusPusher) {
 
-        this.benchProfilePath = benchProfilePath;
+        this.profilePath = profilePath;
         this.telemetryProfile = telemetryProfile;
         this.benchConfig = benchConfig;
         this.logger = logger;
@@ -206,7 +206,7 @@ export default class WorkersWrapper {
                 commonConfig: this.commonConfig,
                 sharedAvgTpsBuffer: this.sharedAvgTpsBuffer,
                 sharedTransProcessedBuffer: this.sharedTransProcessedBuffer,
-                benchProfilePath: this.benchProfilePath,
+                profilePath: this.profilePath,
                 iThreadId: iThreadId
             }
         });

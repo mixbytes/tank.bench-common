@@ -16,18 +16,18 @@ test("Simple default internal test", async cb => {
     await testBench(cb);
 });
 
-test("Simple internal test", async cb => {
-    process.argv = ["-b=SimpleBenchProfile"];
+test("Simple common internal test", async cb => {
+    process.argv = ["-p=SimpleBenchProfile"];
     await testBench(cb);
 });
 
-test("Simple common internal test", async cb => {
-    process.argv = ["-n=SimpleBenchProfile"];
+test("Simple internal test", async cb => {
+    process.argv = ["-p=SimpleBenchProfile"];
     await testBench(cb);
 });
 
 test("Simple external test", async cb => {
-    process.argv = ["-b=./test/simple/testCase/SimpleBenchProfileExt.js"];
+    process.argv = ["-p=./test/simple/testCase/SimpleBenchProfileExt.js"];
     await testBench(cb);
 });
 
