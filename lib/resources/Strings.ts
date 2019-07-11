@@ -10,6 +10,9 @@ const Strings = {
         preparingToBenchmark: () =>
             `Preparing to benchmark...`,
 
+        startingBenchmarkThreads: () =>
+            `Preparation completed, starting benchmark threads...`,
+
         startingBenchmark: (threads: number) =>
             `Starting benchmark (${threads} threads)...`,
 
@@ -28,14 +31,22 @@ const Strings = {
             ["-mc=", "--module-config="],
 
         benchProfileFilePathArgs: () =>
-            ["-case=", "--bench-case=", "-p=", "--profile="],
+            ["-b=", "--bench-profile="],
+
+        preparationProfileFilePathArgs: () =>
+            ["-p=", "--preparation-profile="],
+
+        telemetryProfileFilePathArgs: () =>
+            ["-t=", "--telemetry-profile="],
+
+        commonProfileFilePathArgs: () =>
+            ["-case=", "-n=", "--profile-name="],
 
         commonConfigFilePath: () =>
             `./bench.config.json`,
 
         moduleConfigFilePath: () =>
             `./module.config.json`
-
 
     }
 };

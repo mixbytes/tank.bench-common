@@ -2,7 +2,7 @@ import {Worker} from "worker_threads";
 import Logger from "../resources/Logger";
 import getWorkerFilePath from "./BenchWorker";
 import PrometheusPusher from "../metrics/PrometheusPusher";
-import Telemetry, {TelemetryData} from "../module/steps/Telemetry";
+import TelemetryProfile, {TelemetryData} from "../module/steps/TelemetryProfile";
 import Strings from "../resources/Strings";
 
 const FINISH_CHECKER_INTERVAL = 100;
@@ -40,7 +40,7 @@ export default class WorkersWrapper {
     private readonly workers: Worker[];
     private readonly terminatedWorkers = new Map<Worker, boolean>();
 
-    private readonly benchTelemetryStep: Telemetry;
+    private readonly telemetryProfile: TelemetryProfile;
 
     private logInterval: any;
     private stopIfProcessedInterval: any;
@@ -55,14 +55,14 @@ export default class WorkersWrapper {
     private benchReject?: (reason?: any) => void;
 
     constructor(benchProfilePath: string,
-                benchTelemetryStep: Telemetry,
+                telemetryProfile: TelemetryProfile,
                 logger: Logger,
                 benchConfig: any,
                 commonConfig: any,
                 prometheusPusher?: PrometheusPusher) {
 
         this.benchProfilePath = benchProfilePath;
-        this.benchTelemetryStep = benchTelemetryStep;
+        this.telemetryProfile = telemetryProfile;
         this.benchConfig = benchConfig;
         this.logger = logger;
         this.commonConfig = commonConfig;
@@ -70,10 +70,12 @@ export default class WorkersWrapper {
 
         this.workerFilePath = getWorkerFilePath();
 
-        this.sharedAvgTpsBuffer = new SharedArrayBuffer(4 * this.commonConfig.threadsAmount);
+        this.sharedAvgTpsBuffer =
+            new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * this.commonConfig.threadsAmount);
         this.sharedAvgTpsArray = new Int32Array(this.sharedAvgTpsBuffer);
 
-        this.sharedTransProcessedBuffer = new SharedArrayBuffer(4 * this.commonConfig.threadsAmount);
+        this.sharedTransProcessedBuffer =
+            new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * this.commonConfig.threadsAmount);
         this.sharedTransProcessedArray = new Int32Array(this.sharedTransProcessedBuffer);
 
         this.sharedTransProcessedArray.fill(WORKER_STATE_PREPARING);
@@ -85,6 +87,7 @@ export default class WorkersWrapper {
 
     async bench() {
         return new Promise((resolve, reject) => {
+            this.logger.log(Strings.log.startingBenchmarkThreads());
             this.benchResolve = resolve;
             this.benchReject = reject;
             this.activeWorkers = this.commonConfig.threadsAmount;
@@ -106,7 +109,7 @@ export default class WorkersWrapper {
         if (this.telemetryStepInterval)
             clearInterval(this.telemetryStepInterval);
 
-        this.benchTelemetryStep.onBenchEnded(this.calcTelemetryStepData()).then(() => {
+        this.telemetryProfile.onBenchEnded(this.calcTelemetryStepData()).then(() => {
             if (this.wasStarted) {
                 if (this.benchError)
                     console.log("Benchmark finished with error");
@@ -136,7 +139,7 @@ export default class WorkersWrapper {
     private onMessage(worker: Worker, message: any) {
         switch (message.method) {
             case "onStopBenchmark":
-                worker.terminate(() => {
+                worker.terminate().then(() => {
                     this.onWorkerTerminate();
                 });
                 this.terminatedWorkers.set(worker, true);
@@ -146,7 +149,7 @@ export default class WorkersWrapper {
                 if (this.stopIfProcessedInterval)
                     clearInterval(this.stopIfProcessedInterval);
 
-                worker.terminate(() => {
+                worker.terminate().then(() => {
                     this.onWorkerTerminate();
                 });
                 this.terminatedWorkers.set(worker, true);
@@ -272,7 +275,7 @@ export default class WorkersWrapper {
         }
 
         this.telemetryStepInterval = setInterval(() => {
-            this.benchTelemetryStep.onKeyPoint(this.calcTelemetryStepData());
+            this.telemetryProfile.onKeyPoint(this.calcTelemetryStepData());
         }, this.commonConfig.telemetryStepInterval);
 
         this.stopIfProcessedInterval = setInterval(() => {

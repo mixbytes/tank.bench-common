@@ -1,11 +1,8 @@
-import {BenchProfile, BuiltinBenchProfile, TransactionResult} from "../../lib";
+import {BenchProfile, TransactionResult} from "../../lib";
 
 export default class ErrorBenchProfile extends BenchProfile {
 
-    static readonly benchProfile: BuiltinBenchProfile = {
-        fileName: __filename,
-        name: "error"
-    };
+    static readonly fileName = __filename;
 
     async asyncConstruct(threadId: number) {
         if (threadId == this.benchConfig.commonConfig.threadsAmount - 1)

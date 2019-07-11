@@ -7,7 +7,7 @@ export interface TransactionResult {
     error: any
 }
 
-export default abstract class BenchProfile extends Step {
+export default class BenchProfile extends Step {
 
     protected benchConfig: any;
 
@@ -18,7 +18,7 @@ export default abstract class BenchProfile extends Step {
     }
 
     // noinspection JSMethodCanBeStatic,JSUnusedLocalSymbols
-    commitTransaction(uniqueData: string): Promise<TransactionResult> {
+    commitTransaction(uniqueData: string, threadId: number, benchConfig: any): Promise<TransactionResult> {
         return Promise.resolve({
             code: WORKER_ERROR_NO_IMPLEMENTATION,
             error: new Error(`You should override "commitTransaction" method`)
@@ -26,7 +26,12 @@ export default abstract class BenchProfile extends Step {
     }
 
     // noinspection JSMethodCanBeStatic,JSUnusedLocalSymbols
-    asyncConstruct(threadId: number): Promise<any> {
+    asyncConstruct(threadId: number, benchConfig: any): Promise<any> {
+        return Promise.resolve();
+    }
+
+    // noinspection JSMethodCanBeStatic,JSUnusedLocalSymbols
+    asyncDestroy(threadId: number, benchConfig: any): Promise<any> {
         return Promise.resolve();
     }
 }

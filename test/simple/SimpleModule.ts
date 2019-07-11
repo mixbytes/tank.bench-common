@@ -1,5 +1,5 @@
-import {BlockchainModule, BuiltinBenchProfile, Logger, Preparation} from "../../lib";
-import SimpleModulePreparation from "./SimpleModulePreparation";
+import {BlockchainModule, BuiltinProfile} from "../../lib";
+import DefaultPreparationProfile from "./DefaultPreparationProfile";
 
 import SimpleBenchProfile from "./SimpleBenchProfile";
 import DefaultBenchProfile from "./DefaultBenchProfile";
@@ -7,16 +7,28 @@ import ErrorBenchProfile from "./ErrorBenchProfile";
 
 
 export default class SimpleModule extends BlockchainModule {
-
-    createPreparationStep(commonConfig: any, moduleConfig: any, logger: Logger): Preparation {
-        return new SimpleModulePreparation(commonConfig, moduleConfig, logger);
-    }
-
-    getBuiltinProfiles(): BuiltinBenchProfile[] {
+    getBuiltinProfiles(): BuiltinProfile[] {
         return [
-            SimpleBenchProfile.benchProfile,
-            DefaultBenchProfile.benchProfile,
-            ErrorBenchProfile.benchProfile
+            {
+                preparationFile: DefaultPreparationProfile.fileName,
+                benchFile: DefaultBenchProfile.fileName,
+                telemetryFile: null,
+                name: "default"
+            },
+
+            {
+                preparationFile: DefaultPreparationProfile.fileName,
+                benchFile: SimpleBenchProfile.fileName,
+                telemetryFile: null,
+                name: "SimpleBenchProfile"
+            },
+
+            {
+                preparationFile: DefaultPreparationProfile.fileName,
+                benchFile: ErrorBenchProfile.fileName,
+                telemetryFile: null,
+                name: "error"
+            },
         ]
     }
 

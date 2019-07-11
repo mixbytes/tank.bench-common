@@ -9,7 +9,9 @@ export interface TelemetryData {
     benchTime: number,
 }
 
-export default abstract class Telemetry extends Step {
+export default class TelemetryProfile extends Step {
+
+    static readonly fileName = __filename;
 
     protected benchConfig: any;
 
@@ -19,12 +21,18 @@ export default abstract class Telemetry extends Step {
     }
 
     // Should be fast
-    abstract onKeyPoint(d: TelemetryData): any;
+    // noinspection JSUnusedLocalSymbols
+    onKeyPoint(d: TelemetryData) {
 
-    abstract onBenchEnded(d: TelemetryData): Promise<any>;
+    }
 
-    // noinspection JSMethodCanBeStatic
-    asyncConstruct(): Promise<any> {
+    // noinspection JSMethodCanBeStatic,JSUnusedLocalSymbols
+    onBenchEnded(d: TelemetryData): Promise<any> {
+        return Promise.resolve();
+    }
+
+    // noinspection JSMethodCanBeStatic,JSUnusedLocalSymbols
+    asyncConstruct(benchConfig: any): Promise<any> {
         return Promise.resolve();
     }
 }

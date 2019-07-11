@@ -14,7 +14,7 @@ threads amount (applies load using node's **worker_threads**).
 
 ## Requirements
 
-To use this package you need at least **node v11** because of using **worker-threads** feature to run the benchmark
+To use this package you need at least **node v12.5** because of using **worker-threads** feature to run the benchmark
 using multiple CPUs. 
 
 ## How to install?
@@ -34,9 +34,6 @@ or [PolkaDot implementation](https://github.com/mixbytes/tank.bench-polkadot)
 
 So, the first thing you should do in your module is to create class that extends `BlockchainModule` class.
 
-It contains methods you should define. In the methods that start with `create` prefix you should instantiate "steps" - 
-overridden classes, that contain your specific code that will be called in specified moments of time.
-
 In `getConfigSchema` method you should return schema of your configuration
 (using [node-convict](https://github.com/mozilla/node-convict) schema), so the configuration file of your module will
 be checked if it corresponds to this schema, otherwise the programm will throw error and stop.
@@ -46,76 +43,107 @@ configuration file.
 
 
 ```typescript
-import {BlockchainModule, Logger, Preparation, Telemerty} from "tank.bench-common"
+import {BlockchainModule, BuiltinProfile, PreparationProfile, Telemerty} from "tank.bench-common"
 
-export default class MyModule extends BlockchainModule {
-    
-    createPreparationStep(commonConfig: any, moduleConfig: any, logger: Logger): Preparation {
-        return new MyModulePreparation(commonConfig, moduleConfig, logger);
-    }
-    
-    createTelemetryStep(commonConfig: any, moduleConfig: any, logger: Logger): Telemetry {
-        return new MyModuleTelemetry(commonConfig, moduleConfig, logger);
+export default class SimpleModule extends BlockchainModule {
+    getBuiltinProfiles(): BuiltinProfile[] {
+        return [
+            {
+                benchFile: DefaultBenchProfile.fileName,
+                preparationFile: DefaultPreparationProfile.fileName,
+                telemetryFile: null,
+                name: "default"
+            },
+
+            {
+                benchFile: SuperBenchProfile.fileName,
+                preparationFile: null,
+                telemetryFile: DefaultTelemetryProfile.fileName,
+                name: "SuperProfile"
+            },
+        ]
     }
 
     getConfigSchema(): any {
         return {
-            myCustomUrl: {
-                    arg: 'myModule.myCustomUrl',
-                    format: String,
-                    default: null,
-                    doc: "URL for my blockchain endpoint"
-                },
-        };
+            hello: {
+                type: "String",
+                default: name
+            }
+        }
     }
 
     getDefaultConfigFilePath(): string | null {
-        return "./myModule.bench.config.json"
+        return "supermodule.bench.config.json";
     }
 }
 ```
 
-### What are the steps?
+### What is profile?
 
-Step is a class that contains some code that will run on specific time and thread. Every step is used for it's
-own purpose.
+Profile is a set of files, containing one class in each other. There are 3 parts of a profile - **preparation**,
+**telemetry** and **bench (required)**. Other parts are optional.
 
-#### PrepareStep
+Profile specifies the code that will be run on concrete time and thread.
 
-The main goal of the `PrepareStep` is to commit preparation transactions like accounts creation. Do this job in the
+Every class that is part of profile provide `asyncConstruct` method to implement. No methods will be called in
+your implementation before the promise you returned become resolved. This may be useful.
+
+
+#### Preparation
+
+The main goal of the **Preparation** part is to commit preparation transactions like accounts creation. Do this job in the
 `prepare` method, returning **Promise**. The object returned from this promise will be used as config for the next step,
 the **BenchProfile**
 
-#### TelemetryStep
+#### Telemetry
 
-`TelemetryStep` contains code that will be called in some specific keypoint during benchmark. Every method takes 
-**telemetryData**. It is the structure containing information such as TPS and some other data.
+**Telemetry** part contains code that will be called in some specific keypoint during benchmark. Every method takes 
+`telemetryData`. It is the structure containing information such as TPS and some other data.
 
-`onKeyPoint` method will be called when committed every N (N is gotten from **commonConfig**)
+`onKeyPoint` method will be called when committed every N (N is gotten from **commonConfig**).
 
-`onBenchEnded` method will be called when the benchmark is ended succesfully.
+`onBenchEnded` method will be called when the benchmark is ended successfully.
 
-This step can be used if you want to have your own telemetry (not using built-in **prometheus** one), or just to do
+This part can be used if you want to have your own telemetry (not using built-in **prometheus** one), or just to do
 logging stuff.
 
-### BenchProfile
+### Bench
 
-`BenchProfile` is a class that describes what load transactions to commit. 
+`Bench` is a class that describes what load transactions to commit. 
 It provides `commitTransaction` method, in which you
 can commit transactions. Important part of this step that it will be instantiated as many times as provided in config
 via **threadsAmount** parameter, each in it's own **worker_thread**. Also, you need too remember
-that the `commitBenchmarkTransaction` method can be called using multiple promises.
+that the `commitTransaction` method can be called using multiple promises (subsequently).
 
 You should return Promise from `commitTransaction` method, and transaction will be counted as processed
 when you resolve this promise.
-In this promise you have to specify **responseCode** or **error** to use telemetry correctly.
+In this promise you have to specify **responseCode** and **error (may be null)** to use telemetry correctly.
 
-Both `Preparation` and `BenchProfile` provide `asyncConstruct` method to implement. No methods will be called in
-your implementation before the promise you returned become resolved. This may be useful.
+### Builtin profiles
 
-Your `BenchProfile` implementation class should be written in a separate file, exporting class that overrides `BenchProfile`
-base class. Than you should pass it as command line argument.
+The main goal of profiles is to be passed to benchmark via cli arguments to use this on special servers.
+But you can specify the builtin profiles that will be used if no profile parts files art provided as arguments.
+If you don't specify any cli argument for profile path, the builtin profile named **default** will be used (if such
+exists).
 
+### External profiles
+
+If the profile is used as external js files, you can specify them as cli arguments.
+So when you start bench like this: 
+
+```bash
+npm start -- -p="./MyGreatProfile"
+```
+
+It means, that it has to use preparation part from "MyGreatProfile.js" file, default bench part and default telemetry part.
+
+Here is the list of flags:
+
+* **-p=** flag is used to specify **preparation** part
+* **-b=** flag is used to specify **bench** part
+* **-t=** flag is used to specify **telemetry** part
+* **-n=** flag is used to specify all parts if using builtin profile. So you provide the name of profile after "=" sign.
 
 ### How to run?
 
@@ -129,10 +157,10 @@ Note that you must specify at least one command line argument - the name of `Ben
 Like this:
 
 ```bash
-npm start -- -p="./MyGreatProfile"
+npm start -- -b="./MyGreatBenchProfile"
 ```
 
-It will start benchmark, starting with `Preparation`. If any error occurred, it will stop and log the error.
+It will start benchmark, starting with `PreparationProfile`. If any error occurred, it will stop and log the error.
 
 ### Configuration
 
@@ -147,7 +175,7 @@ module config from **module.bench.config.json**. You can override this logic in 
 Also you can provide arguments to the programm overriding default paths of configuration. The are **--commonconfig** 
 and **--moduleconfig** (and their short versions, **-cc** and **-mc**).
 
-For example, `npm start -- -p="./MyGreatProfile" -mc=mymodule.json` will get module config from `mymodule.json` file.
+For example, `npm start -- -b="./MyGreatBenchProfile" -mc=mymodule.json` will get module config from `mymodule.json` file.
 
 #### Common code configuration
 
@@ -163,7 +191,7 @@ Here is the list of available configuration parameters:
      stop on specified amount, provide **-1** as value.
 * **prometheusTelemetry** - this section specifies configuration of built-in prometheus telemetry.
     * **enable** - if the telemetry is enabled. All other fields in this section are optional if this is set to **false**.
-    * **url** - the url of prometheus **push-gateway** where telemerty should be pushed.
+    * **url** - the url of prometheus **push-gateway** where telemetry should be pushed.
     * **user** - the login of push-gateway user. Optional.
     * **password** - the password of push-gateway user. Optional.
     * **respCodeBuckets** - the buckets for transactions responseCodes histogram.
@@ -180,4 +208,4 @@ All fields are required, if otherwise not written.
 
 * Cannot find module 'worker_threads'
   
-  To fix this problem you should switch to using at least **node v11**
+  To fix this problem you should switch to using at least **node v12.5**

@@ -2,11 +2,16 @@ import BlockchainModule from "../module/BlockchainModule";
 import Strings from "../resources/Strings";
 import CommonConfigSchema from "./CommonConfigSchema";
 import * as convict from "convict";
+import PreparationProfile from "../module/steps/PreparationProfile";
+import TelemetryProfile from "../module/steps/TelemetryProfile";
+import BuiltinProfile from "../module/steps/BuiltinProfile";
 
 export default class Config {
     private readonly _commonConfig: any;
     private readonly _moduleConfig: any;
     private readonly _benchProfilePath: string;
+    private readonly _preparationProfilePath: string;
+    private readonly _telemetryProfilePath: string;
 
     constructor(blockchainModule: BlockchainModule) {
 
@@ -27,6 +32,8 @@ export default class Config {
         }
 
         this._benchProfilePath = Config.getBenchProfilePath(blockchainModule);
+        this._preparationProfilePath = Config.getPreparationProfilePath(blockchainModule);
+        this._telemetryProfilePath = Config.getTelemetryProfilePath(blockchainModule);
 
         const commonConvict = convict(CommonConfigSchema);
         commonConvict.loadFile(commonConfigFilePath);
@@ -53,36 +60,105 @@ export default class Config {
         this._moduleConfig = moduleConvict.getProperties();
     }
 
-    private static getBenchProfilePath(blockchainModule: BlockchainModule): string {
-        if (blockchainModule.benchProfilePath)
-            return blockchainModule.benchProfilePath;
+    get preparationProfilePath(): string {
+        return this._preparationProfilePath;
+    }
 
-        let arg = Config.processArg(Strings.constants.benchProfileFilePathArgs());
+    get telemetryProfilePath(): string {
+        return this._telemetryProfilePath;
+    }
 
+    private static getProfilePath(blockchainModule: BlockchainModule,
+                                  args: string[],
+                                  fieldName: string,
+                                  helpName: string,
+                                  helpFlags: string[],
+                                  checkNull: string | null
+    ) {
+        let useProfile = (profile: BuiltinProfile) => {
+            // @ts-ignore
+            let defaultField = profile[fieldName];
+
+            if (checkNull == null)
+                return defaultField;
+
+            if (defaultField === null) {
+                console.warn(`${helpName} implementation is default for tank!`);
+                return checkNull;
+            }
+
+            return defaultField;
+        };
+
+        let arg = Config.processArg(Strings.constants.commonProfileFilePathArgs());
         if (arg) {
             for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
-                let c = blockchainModule.getBuiltinProfiles()[i];
-                if (c.name === arg) {
-                    return c.fileName;
+                let profile = blockchainModule.getBuiltinProfiles()[i];
+                if (profile.name === arg) {
+                    return useProfile(profile)
+                }
+            }
+            return arg;
+        }
+
+        arg = Config.processArg(args);
+        if (arg) {
+            for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
+                let profile = blockchainModule.getBuiltinProfiles()[i];
+                if (profile.name === arg) {
+                    return useProfile(profile)
                 }
             }
             return arg;
         }
 
         for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
-            let c = blockchainModule.getBuiltinProfiles()[i];
-            if (c.name === "default") {
-                console.warn("The default bench profile is used!");
-                console.warn("You can specify the bench profile (using -p=<case_file> or --profile=<builtin_case_name> flag)");
-                return c.fileName;
+            let profile = blockchainModule.getBuiltinProfiles()[i];
+            if (profile.name === "default") {
+                console.warn(`The default ${helpName} profile is used!`);
+                console.warn(`You can specify the ${helpName} profile (using ${helpFlags.reduce((hf, acc, i) => `${hf}${acc}${i !== helpFlags.length - 1 ? " or " : ""}`, "")} flag)`);
+                return useProfile(profile)
             }
         }
 
-        throw new Error("You need to specify the bench profile (using -p=<case_file> or --profile=<builtin_case_name> flag)");
+        throw new Error("You need to specify the BENCH profile (using -b=<bench_profile_file> or --bench-profile=<bench_profile_file> flag)");
+    }
+
+    private static getBenchProfilePath(blockchainModule: BlockchainModule) {
+        return Config.getProfilePath(
+            blockchainModule,
+            Strings.constants.benchProfileFilePathArgs(),
+            "benchFile",
+            "BENCH",
+            ["-b=<bench_profile_file>", "--bench-profile=<bench_profile_file>"],
+            null
+        )
     }
 
     get benchProfilePath(): string {
         return this._benchProfilePath;
+    }
+
+    private static getPreparationProfilePath(blockchainModule: BlockchainModule) {
+        return Config.getProfilePath(
+            blockchainModule,
+            Strings.constants.preparationProfileFilePathArgs(),
+            "preparationFile",
+            "PREPARATION",
+            ["-p=<preparation_profile_file>", "--preparation-profile=<preparation_profile_file>"],
+            PreparationProfile.fileName
+        )
+    }
+
+    private static getTelemetryProfilePath(blockchainModule: BlockchainModule) {
+        return Config.getProfilePath(
+            blockchainModule,
+            Strings.constants.telemetryProfileFilePathArgs(),
+            "telemetryFile",
+            "TELEMETRY",
+            ["-t=<telemetry_profile_file>", "--telemetry-profile=<telemetry_profile_file>"],
+            TelemetryProfile.fileName
+        )
     }
 
     static getConvictDocumentation = (convict: convict.Config<any>) => {
@@ -125,6 +201,6 @@ export default class Config {
 
     private validateCommonConfig() {
         if (this._commonConfig.prometheusTelemetry.enable && this._commonConfig.prometheusTelemetry.url === "")
-            throw new Error("If you enable prometheus telemerty, you must specify it's endpoint URL in config.");
+            throw new Error("If you enable prometheus telemetry, you must specify it's endpoint URL in config.");
     }
 }

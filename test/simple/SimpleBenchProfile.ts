@@ -1,11 +1,8 @@
-import {BenchProfile, BuiltinBenchProfile, TransactionResult} from "../../lib";
+import {BenchProfile, TransactionResult} from "../../lib";
 
 export default class SimpleBenchProfile extends BenchProfile {
 
-    static readonly benchProfile: BuiltinBenchProfile = {
-        fileName: __filename,
-        name: "SimpleBenchProfile"
-    };
+    static readonly fileName = __filename;
 
     commitTransaction(uniqueData: string): Promise<TransactionResult> {
         return new Promise(resolve => {

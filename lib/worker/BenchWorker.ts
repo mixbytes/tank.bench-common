@@ -64,7 +64,7 @@ class Bench {
             this.benchProfile = <BenchProfile>new benchProfileImport(this.benchConfig, new Logger(this.commonConfig));
         }
 
-        await this.benchProfile.asyncConstruct(this.iThreadId);
+        await this.benchProfile.asyncConstruct(this.iThreadId, this.benchConfig);
 
         Atomics.store(this.sharedTransProcessedArray, this.iThreadId, WORKER_STATE_PREPARED);
 
@@ -91,6 +91,8 @@ class Bench {
         // To not start all threads in one time
         await sleep(this.targetTransactionTime * (this.iThreadId));
         await this.transactionsPushLoop();
+
+        await this.benchProfile.asyncDestroy(this.iThreadId, this.benchConfig);
     }
 
     private async commitBenchTransaction(idInPromisesArray: number) {
@@ -103,7 +105,7 @@ class Bench {
 
         let trRes: TransactionResult;
         try {
-            trRes = await this.benchProfile.commitTransaction(key);
+            trRes = await this.benchProfile.commitTransaction(key, this.iThreadId, this.benchConfig);
         } catch (e) {
             trRes = {code: WORKER_ERROR_DEFAULT, error: e};
         }
