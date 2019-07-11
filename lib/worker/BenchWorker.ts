@@ -66,7 +66,7 @@ class Bench {
             profile = <Profile>profileImport;
         }
 
-        this.benchProfile = new profile.benchProfile(this.benchProfile, new Logger(this.commonConfig));
+        this.benchProfile = new profile.benchProfile(this.benchConfig, new Logger(this.commonConfig));
 
         await this.benchProfile.asyncConstruct(this.iThreadId, this.benchConfig);
 
