@@ -21,7 +21,13 @@ const profile: Profile = {
     fileName: __filename,
     benchProfile: ErrorProfile,
     preparationProfile: undefined,
-    telemetryProfile: undefined
+    telemetryProfile: undefined,
+    configSchema: {
+        hello: {
+            type: "String",
+            default: "not world"
+        }
+    },
 };
 
 export default profile;

@@ -13,5 +13,11 @@ class SimpleBenchProfileExt extends BenchProfile {
 
 module.exports = {
     fileName: __filename,
-    benchProfile: SimpleBenchProfileExt
+    benchProfile: SimpleBenchProfileExt,
+    configSchema: {
+        hello: {
+            type: "String",
+            default: "not world"
+        }
+    },
 };

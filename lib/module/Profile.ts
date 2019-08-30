@@ -7,4 +7,5 @@ export default interface Profile {
     benchProfile: typeof BenchProfile,
     preparationProfile: typeof PreparationProfile | undefined,
     telemetryProfile: typeof TelemetryProfile | undefined,
+    configSchema: any,
 }

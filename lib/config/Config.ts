@@ -1,11 +1,11 @@
 import BlockchainModule from "../module/BlockchainModule";
 import Strings from "../resources/Strings";
-import CommonConfigSchema from "./CommonConfigSchema";
 import * as convict from "convict";
 import Profile from "../module/Profile";
 import {resolve} from "path";
 import TelemetryProfile from "../module/steps/TelemetryProfile";
 import PreparationProfile from "../module/steps/PreparationProfile";
+import CommonConfigSchema from "./CommonConfigSchema";
 
 export default class Config {
     private _commonConfig: any;
@@ -82,12 +82,8 @@ export default class Config {
         return documentation.trim();
     };
 
-    getCommonConfig(): any {
-        return {...this._commonConfig};
-    }
-
-    getModuleConfig(): any {
-        return {...this._moduleConfig};
+    getCommonConfig() {
+        return this.getCommonConfigInternal(CommonConfigSchema);
     }
 
     async init(blockchainModule: BlockchainModule) {
@@ -119,6 +115,7 @@ export default class Config {
         }
 
         const commonConvict = convict(CommonConfigSchema);
+
         commonConvict.loadFile(commonConfigFilePath);
         try {
             commonConvict.validate({allowed: "strict"});
@@ -127,11 +124,15 @@ export default class Config {
             console.error(Config.getConvictDocumentation(commonConvict));
             throw e;
         }
-        this._commonConfig = commonConvict.getProperties();
+        this._commonConfig = commonConvict;
 
         this.validateCommonConfig();
 
-        const moduleConvict = convict(blockchainModule.getConfigSchema());
+        if (this.profile.configSchema === null || typeof this.profile.configSchema !== "object") {
+            throw new Error("The profile MUST export configSchema")
+        }
+
+        const moduleConvict = convict(this.profile.configSchema);
         moduleConvict.loadFile(moduleConfigFilePath);
         try {
             moduleConvict.validate({allowed: "strict"});
@@ -141,6 +142,14 @@ export default class Config {
             throw e;
         }
         this._moduleConfig = moduleConvict.getProperties();
+    }
+
+    getModuleConfig(): any {
+        return {...this._moduleConfig};
+    }
+
+    private getCommonConfigInternal<T>({}: convict.Schema<T> | string): T {
+        return this._commonConfig.getProperties();
     }
 
     private static processArg(argVariants: string[]): string | null {
@@ -156,7 +165,8 @@ export default class Config {
     }
 
     private validateCommonConfig() {
-        if (this._commonConfig.prometheusTelemetry.enable && this._commonConfig.prometheusTelemetry.url === "")
+        let props = this.getCommonConfig();
+        if (props.prometheusTelemetry.enable && props.prometheusTelemetry.url === "")
             throw new Error("If you enable prometheus telemetry, you must specify it's endpoint URL in config.");
     }
 }

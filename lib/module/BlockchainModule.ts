@@ -2,8 +2,6 @@ import BenchRunner from "../runner/BenchRunner";
 import BuiltinProfile from "./steps/BuiltinProfile";
 
 export default abstract class BlockchainModule {
-    abstract getConfigSchema(): any;
-
 // noinspection JSMethodCanBeStatic
     getBuiltinProfiles(): BuiltinProfile[] {
         return [];
@@ -15,6 +13,6 @@ export default abstract class BlockchainModule {
     }
 
     bench(exit = true): Promise<any> {
-        return new BenchRunner(this).bench(exit)
+        return BenchRunner(this).bench(exit)
     }
 }

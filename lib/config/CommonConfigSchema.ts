@@ -19,6 +19,12 @@ export default {
             doc: "Stop if achieved this amount of transactions. WARNING: some additional transactions may be processed."
         }
     },
+    skipPreparation: {
+        arg: 'skipPreparation',
+        format: Boolean,
+        default: false,
+        doc: "weather to skip the preparation step or not (Bench step will receive commonConfig as config)"
+    },
     prometheusTelemetry: {
         enable: {
             arg: 'prometheusTelemetry.enable',

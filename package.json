@@ -1,6 +1,6 @@
 {
   "name": "tank.bench-common",
-  "version": "3.1.1",
+  "version": "4.0.0",
   "description": "Common part for tank bench modules",
   "license": "Apache-2.0",
   "repository": {
@@ -23,15 +23,15 @@
     "test": "npm run build && jest"
   },
   "dependencies": {
-    "@types/node": "12.6.2",
+    "@types/node": "12.7.3",
     "@types/convict": "4.2.1",
-    "convict": "5.0.0",
+    "convict": "5.1.0",
     "prom-client": "11.5.3"
   },
   "devDependencies": {
-    "@types/jest": "24.0.15",
-    "jest": "24.8.0",
+    "@types/jest": "24.0.18",
+    "jest": "24.9.0",
     "ts-jest": "24.0.2",
-    "typescript": "3.5.3"
+    "typescript": "3.6.2"
   }
 }

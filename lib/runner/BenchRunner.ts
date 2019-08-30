@@ -5,16 +5,16 @@ import WorkersWrapper from "../worker/WorkersWrapper";
 import Config from "../config/Config";
 import PrometheusPusher from "../metrics/PrometheusPusher";
 
-export default class BenchRunner {
+class BenchRunner {
     private readonly blockchainModule: BlockchainModule;
     private readonly config!: Config;
     private commonConfig!: any;
     private moduleConfig!: any;
     private logger!: Logger;
 
-    constructor(blockchainModule: BlockchainModule) {
+    constructor(blockchainModule: BlockchainModule, config: Config) {
         this.blockchainModule = blockchainModule;
-        this.config = new Config();
+        this.config = config;
     }
 
     async bench(exit = true) {
@@ -54,4 +54,9 @@ export default class BenchRunner {
             process.exit(0)
         }
     }
+}
+
+export default function (blockchainModule: BlockchainModule) {
+    let config = new Config();
+    return new BenchRunner(blockchainModule, config);
 }
