@@ -22,7 +22,18 @@ export default class Config {
             for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
                 let builtinProfile = blockchainModule.getBuiltinProfiles()[i];
                 if (builtinProfile.name === arg) {
-                    return builtinProfile.profile;
+                    let profile = builtinProfile.profile;
+                    if (!profile.preparationProfile) {
+                        console.warn(`The ${builtinProfile.name} profile don't export PREPARATION profile, so default one is used!`);
+                        profile.preparationProfile = PreparationProfile;
+                    }
+
+                    if (!profile.telemetryProfile) {
+                        console.warn(`The ${builtinProfile.name} profile don't export TELEMETRY profile, so default one is used!`);
+                        profile.telemetryProfile = TelemetryProfile;
+                    }
+
+                    return profile;
                 }
             }
 
@@ -37,15 +48,33 @@ export default class Config {
             for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
                 let builtinProfile = blockchainModule.getBuiltinProfiles()[i];
                 if (builtinProfile.name === "default") {
-                    if (profile.preparationProfile === "useDefault") {
+                    if (profile.preparationProfile === "takeFromBlockchainModuleDefaultProfile") {
                         profile.preparationProfile = builtinProfile.profile.preparationProfile;
-                        console.warn(`The PREPARATION profile is taken from default profile!`);
+                        console.warn(`The PREPARATION profile is taken from default profile for module!`);
+                        if (!profile.preparationProfile) {
+                            console.warn(`Module's default profile don't export PREPARATION profile, so default one is used!`);
+                            profile.preparationProfile = PreparationProfile;
+                        }
                     }
-                    if (profile.telemetryProfile === "useDefault") {
+                    if (profile.telemetryProfile === "takeFromBlockchainModuleDefaultProfile") {
                         profile.telemetryProfile = builtinProfile.profile.telemetryProfile;
-                        console.warn(`The TELEMETRY profile is taken from default profile!`);
+                        console.warn(`The TELEMETRY profile is taken from default profile for module!`);
+                        if (!profile.telemetryProfile) {
+                            console.warn(`Module's default profile don't export TELEMETRY profile, so default one is used!`);
+                            profile.telemetryProfile = TelemetryProfile;
+                        }
                     }
                 }
+            }
+
+            if (!profile.preparationProfile) {
+                console.warn(`The ${arg} profile does not export the PREPARATION profile, so default one is used!`);
+                profile.preparationProfile = PreparationProfile;
+            }
+
+            if (!profile.telemetryProfile) {
+                console.warn(`The ${arg} profile does not export the TELEMETRY profile, so default one is used!`);
+                profile.telemetryProfile = TelemetryProfile;
             }
 
             return profile;
@@ -56,7 +85,18 @@ export default class Config {
             if (builtinProfile.name === "default") {
                 console.warn(`The default profile is used!`);
                 console.warn(`You can specify the profile (using -p or --profile flag)`);
-                return builtinProfile.profile;
+                let profile = builtinProfile.profile;
+
+                if (!profile.preparationProfile) {
+                    console.warn(`Module's default profile don't export PREPARATION profile, so default one is used!`);
+                    profile.preparationProfile = PreparationProfile;
+                }
+
+                if (!profile.telemetryProfile) {
+                    console.warn(`Module's default profile don't export TELEMETRY profile, so default one is used!`);
+                    profile.telemetryProfile = TelemetryProfile;
+                }
+                return profile;
             }
         }
 
@@ -105,14 +145,6 @@ export default class Config {
         }
 
         this._profile = {...await Config.getProfile(blockchainModule)};
-        if (!this._profile.telemetryProfile) {
-            console.warn(`The default TELEMETRY profile is used!`);
-            this._profile.telemetryProfile = TelemetryProfile;
-        }
-        if (!this._profile.preparationProfile) {
-            console.warn(`The default PREPARATION profile is used!`);
-            this._profile.preparationProfile = PreparationProfile;
-        }
 
         const commonConvict = convict(CommonConfigSchema);
 

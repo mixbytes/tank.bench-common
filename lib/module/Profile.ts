@@ -5,7 +5,7 @@ import TelemetryProfile from "./steps/TelemetryProfile";
 export default interface Profile {
     fileName: string,
     benchProfile: typeof BenchProfile,
-    preparationProfile?: typeof PreparationProfile | "useDefault",
-    telemetryProfile?: typeof TelemetryProfile | "useDefault",
+    preparationProfile?: typeof PreparationProfile | "takeFromBlockchainModuleDefaultProfile",
+    telemetryProfile?: typeof TelemetryProfile | "takeFromBlockchainModuleDefaultProfile",
     configSchema?: any,
 }

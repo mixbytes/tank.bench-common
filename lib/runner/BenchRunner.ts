@@ -35,20 +35,15 @@ class BenchRunner {
             this.logger.log(Strings.log.preparingTelemetrySuccess());
         }
 
-        let benchConfig = undefined;
-        if (this.config.profile.preparationProfile) {
-            let preparationProfile = this.config.profile.preparationProfile as typeof PreparationProfile;
-            let preparation = new preparationProfile(this.commonConfig, this.moduleConfig, this.logger);
-            await preparation.asyncConstruct(this.commonConfig, this.moduleConfig);
-            benchConfig = await preparation.prepare(this.commonConfig, this.moduleConfig);
-        }
+        let preparationProfile = this.config.profile.preparationProfile as typeof PreparationProfile;
+        let preparation = new preparationProfile(this.commonConfig, this.moduleConfig, this.logger);
+        await preparation.asyncConstruct(this.commonConfig, this.moduleConfig);
+        let benchConfig = await preparation.prepare(this.commonConfig, this.moduleConfig);
 
-        let telemetry = undefined;
-        if (this.config.profile.telemetryProfile) {
-            let telemetryProfile = this.config.profile.telemetryProfile as typeof TelemetryProfile;
-            telemetry = new telemetryProfile(benchConfig, this.logger);
-            await telemetry.asyncConstruct(benchConfig);
-        }
+
+        let telemetryProfile = this.config.profile.telemetryProfile as typeof TelemetryProfile;
+        let telemetry = new telemetryProfile(benchConfig, this.logger);
+        await telemetry.asyncConstruct(benchConfig);
 
 
         await new WorkersWrapper(
