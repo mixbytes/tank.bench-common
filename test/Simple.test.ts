@@ -26,9 +26,20 @@ test("Simple internal test", async cb => {
     await testBench(cb);
 });
 
+test("Simple internal test (no config schema)", async cb => {
+    process.argv = ["-p=noConfig"];
+    await testBench(cb);
+});
+
 test("Simple external test", async cb => {
     process.argv = ["-p=./test/simple/testCase/SimpleBenchProfileExt.js"];
     await testBench(cb);
 });
 
+test("Simple error test", async cb => {
+    process.argv = ["-p=error"];
+    await testBench(cb).catch(() => {
+        cb();
+    });
+});
 

@@ -40,7 +40,7 @@ export default class WorkersWrapper {
     private readonly workers: Worker[];
     private readonly terminatedWorkers = new Map<Worker, boolean>();
 
-    private readonly telemetryProfile: TelemetryProfile;
+    private readonly telemetryProfile: TelemetryProfile | undefined;
 
     private logInterval: any;
     private stopIfProcessedInterval: any;
@@ -55,7 +55,7 @@ export default class WorkersWrapper {
     private benchReject?: (reason?: any) => void;
 
     constructor(profilePath: string,
-                telemetryProfile: TelemetryProfile,
+                telemetryProfile: TelemetryProfile | undefined,
                 logger: Logger,
                 benchConfig: any,
                 commonConfig: any,
@@ -108,6 +108,9 @@ export default class WorkersWrapper {
             clearInterval(this.prometheusInterval);
         if (this.telemetryStepInterval)
             clearInterval(this.telemetryStepInterval);
+
+        if (!this.telemetryProfile)
+            return;
 
         this.telemetryProfile.onBenchEnded(this.calcTelemetryStepData()).then(() => {
             if (this.wasStarted) {
@@ -275,7 +278,9 @@ export default class WorkersWrapper {
         }
 
         this.telemetryStepInterval = setInterval(() => {
-            this.telemetryProfile.onKeyPoint(this.calcTelemetryStepData());
+            if (this.telemetryProfile) {
+                this.telemetryProfile.onKeyPoint(this.calcTelemetryStepData());
+            }
         }, this.commonConfig.telemetryStepInterval);
 
         this.stopIfProcessedInterval = setInterval(() => {

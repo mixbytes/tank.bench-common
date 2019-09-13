@@ -4,6 +4,7 @@ import Logger from "../resources/Logger";
 import WorkersWrapper from "../worker/WorkersWrapper";
 import Config from "../config/Config";
 import PrometheusPusher from "../metrics/PrometheusPusher";
+import {PreparationProfile, TelemetryProfile} from "../index";
 
 class BenchRunner {
     private readonly blockchainModule: BlockchainModule;
@@ -34,12 +35,21 @@ class BenchRunner {
             this.logger.log(Strings.log.preparingTelemetrySuccess());
         }
 
-        let preparation = new this.config.profile.preparationProfile!(this.commonConfig, this.moduleConfig, this.logger);
-        await preparation.asyncConstruct(this.commonConfig, this.moduleConfig);
-        let benchConfig = await preparation.prepare(this.commonConfig, this.moduleConfig);
+        let benchConfig = undefined;
+        if (this.config.profile.preparationProfile) {
+            let preparationProfile = this.config.profile.preparationProfile as typeof PreparationProfile;
+            let preparation = new preparationProfile(this.commonConfig, this.moduleConfig, this.logger);
+            await preparation.asyncConstruct(this.commonConfig, this.moduleConfig);
+            benchConfig = await preparation.prepare(this.commonConfig, this.moduleConfig);
+        }
 
-        let telemetry = new this.config.profile.telemetryProfile!(benchConfig, this.logger);
-        await telemetry.asyncConstruct(benchConfig);
+        let telemetry = undefined;
+        if (this.config.profile.telemetryProfile) {
+            let telemetryProfile = this.config.profile.telemetryProfile as typeof TelemetryProfile;
+            telemetry = new telemetryProfile(benchConfig, this.logger);
+            await telemetry.asyncConstruct(benchConfig);
+        }
+
 
         await new WorkersWrapper(
             this.config.profile.fileName,

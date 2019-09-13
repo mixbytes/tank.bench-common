@@ -37,11 +37,11 @@ export default class Config {
             for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
                 let builtinProfile = blockchainModule.getBuiltinProfiles()[i];
                 if (builtinProfile.name === "default") {
-                    if (!profile.preparationProfile) {
+                    if (profile.preparationProfile === "useDefault") {
                         profile.preparationProfile = builtinProfile.profile.preparationProfile;
                         console.warn(`The PREPARATION profile is taken from default profile!`);
                     }
-                    if (!profile.telemetryProfile) {
+                    if (profile.telemetryProfile === "useDefault") {
                         profile.telemetryProfile = builtinProfile.profile.telemetryProfile;
                         console.warn(`The TELEMETRY profile is taken from default profile!`);
                     }
@@ -128,23 +128,24 @@ export default class Config {
 
         this.validateCommonConfig();
 
-        if (this.profile.configSchema === null || typeof this.profile.configSchema !== "object") {
-            throw new Error("The profile MUST export configSchema")
+        if (this.profile.configSchema) {
+            const moduleConvict = convict(this.profile.configSchema);
+            moduleConvict.loadFile(moduleConfigFilePath);
+            try {
+                moduleConvict.validate({allowed: "strict"});
+            } catch (e) {
+                console.error("There is an error in the config of your module. Here is a schema:\n");
+                console.error(Config.getConvictDocumentation(moduleConvict));
+                throw e;
+            }
+            this._moduleConfig = moduleConvict.getProperties();
         }
-
-        const moduleConvict = convict(this.profile.configSchema);
-        moduleConvict.loadFile(moduleConfigFilePath);
-        try {
-            moduleConvict.validate({allowed: "strict"});
-        } catch (e) {
-            console.error("There is an error in the config of your module. Here is a schema:\n");
-            console.error(Config.getConvictDocumentation(moduleConvict));
-            throw e;
-        }
-        this._moduleConfig = moduleConvict.getProperties();
     }
 
     getModuleConfig(): any {
+        if (!this._moduleConfig) {
+            return undefined;
+        }
         return {...this._moduleConfig};
     }
 

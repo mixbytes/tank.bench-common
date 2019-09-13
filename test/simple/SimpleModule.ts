@@ -3,6 +3,7 @@ import {BlockchainModule, BuiltinProfile} from "../../lib";
 import SimpleBenchProfile from "./SimpleProfile";
 import ErrorBenchProfile from "./ErrorProfile";
 import DefaultBenchProfile from "./DefaultProfile"
+import SimpleProfileNoConfig from "./SimpleProfileNoConfig"
 
 export default class SimpleModule extends BlockchainModule {
     getBuiltinProfiles(): BuiltinProfile[] {
@@ -15,6 +16,11 @@ export default class SimpleModule extends BlockchainModule {
             {
                 profile: SimpleBenchProfile,
                 name: "SimpleBenchProfile"
+            },
+
+            {
+                profile: SimpleProfileNoConfig,
+                name: "noConfig"
             },
 
             {

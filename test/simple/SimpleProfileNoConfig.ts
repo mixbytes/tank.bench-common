@@ -1,7 +1,7 @@
 import {BenchProfile, Profile, TransactionResult} from "../../lib";
 import DefaultPreparationProfile from "./DefaultPreparationProfile";
 
-class SimpleProfile extends BenchProfile {
+class SimpleProfileNoConfig extends BenchProfile {
     commitTransaction(uniqueData: string): Promise<TransactionResult> {
         return new Promise(resolve => {
             let code = Math.random() > 0.5 ? 200 : 500;
@@ -13,15 +13,10 @@ class SimpleProfile extends BenchProfile {
 }
 
 const profile: Profile = {
-    configSchema: {
-        hello: {
-            type: "String",
-            default: "not world"
-        }
-    },
     fileName: __filename,
-    benchProfile: SimpleProfile,
-    preparationProfile: DefaultPreparationProfile
+    benchProfile: SimpleProfileNoConfig,
+    preparationProfile: DefaultPreparationProfile,
+    telemetryProfile: undefined
 };
 
 export default profile;

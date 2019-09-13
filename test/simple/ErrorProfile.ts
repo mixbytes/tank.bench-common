@@ -22,12 +22,6 @@ const profile: Profile = {
     benchProfile: ErrorProfile,
     preparationProfile: undefined,
     telemetryProfile: undefined,
-    configSchema: {
-        hello: {
-            type: "String",
-            default: "not world"
-        }
-    },
 };
 
 export default profile;

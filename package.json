@@ -1,6 +1,6 @@
 {
   "name": "tank.bench-common",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Common part for tank bench modules",
   "license": "Apache-2.0",
   "repository": {
@@ -18,9 +18,10 @@
     "dist/lib/"
   ],
   "scripts": {
-    "clean": "rm -rf build",
+    "clean": "rm -rf dist",
     "build": "tsc",
-    "test": "npm run build && jest"
+    "test": "npm run clean && npm run build && jest",
+    "prepare": "npm run clean && npm run test"
   },
   "dependencies": {
     "@types/node": "12.7.3",
