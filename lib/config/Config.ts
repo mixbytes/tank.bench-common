@@ -23,6 +23,11 @@ export default class Config {
                 let builtinProfile = blockchainModule.getBuiltinProfiles()[i];
                 if (builtinProfile.name === arg) {
                     let profile = builtinProfile.profile;
+
+                    if (profile.configSchema) {
+                        throw new Error("Builtin profile MUST NOT export own schema, but needs to use the module's one.");
+                    }
+
                     if (!profile.preparationProfile) {
                         console.warn(`The ${builtinProfile.name} profile don't export PREPARATION profile, so default one is used!`);
                         profile.preparationProfile = PreparationProfile;

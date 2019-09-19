@@ -12,6 +12,10 @@ export default abstract class BlockchainModule {
         return null;
     }
 
+    getConfigSchema(): any {
+        return undefined;
+    }
+
     bench(exit = true): Promise<any> {
         return BenchRunner(this).bench(exit)
     }

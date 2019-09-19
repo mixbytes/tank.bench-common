@@ -13,16 +13,9 @@ class DefaultProfile extends BenchProfile {
 }
 
 const profile: Profile = {
-    configSchema: {
-        hello: {
-            type: "String",
-            default: "not world"
-        }
-    },
     fileName: __filename,
     benchProfile: DefaultProfile,
     preparationProfile: DefaultPreparationProfile,
-    telemetryProfile: undefined
 };
 
 export default profile;

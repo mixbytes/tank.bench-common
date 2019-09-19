@@ -33,4 +33,14 @@ export default class SimpleModule extends BlockchainModule {
     getDefaultConfigFilePath(): string | null {
         return "test/simple/simple.bench.config.json";
     }
+
+
+    getConfigSchema(): any {
+        return {
+            hello: {
+                type: "String",
+                default: "not world"
+            }
+        }
+    }
 }

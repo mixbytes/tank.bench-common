@@ -13,12 +13,6 @@ class SimpleProfile extends BenchProfile {
 }
 
 const profile: Profile = {
-    configSchema: {
-        hello: {
-            type: "String",
-            default: "not world"
-        }
-    },
     fileName: __filename,
     benchProfile: SimpleProfile,
     preparationProfile: DefaultPreparationProfile

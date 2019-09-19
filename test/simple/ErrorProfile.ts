@@ -19,9 +19,7 @@ class ErrorProfile extends BenchProfile {
 
 const profile: Profile = {
     fileName: __filename,
-    benchProfile: ErrorProfile,
-    preparationProfile: undefined,
-    telemetryProfile: undefined,
+    benchProfile: ErrorProfile
 };
 
 export default profile;
