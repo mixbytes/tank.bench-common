@@ -2,7 +2,6 @@ import {isMainThread, parentPort, workerData} from "worker_threads";
 import Logger from "../resources/Logger";
 import BenchProfile, {TransactionResult} from "../module/steps/BenchProfile";
 import {WORKER_ERROR_DEFAULT, WORKER_STATE_ERROR, WORKER_STATE_PREPARED} from "./WorkersWrapper";
-import {resolve} from "path";
 import Profile from "../module/Profile";
 
 export default function getWorkerFilePath() {
@@ -58,7 +57,7 @@ class Bench {
     }
 
     async startBench() {
-        let profileImport = await import(resolve(this.profilePath));
+        let profileImport = require(this.profilePath);
         let profile: Profile;
         if (profileImport.default) {
             profile = <Profile>profileImport.default;

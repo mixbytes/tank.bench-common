@@ -1,4 +1,4 @@
-import {BenchProfile, Profile, TransactionResult} from "../../lib";
+import {BenchProfile, BuiltinProfile, TransactionResult} from "../../lib";
 import DefaultPreparationProfile from "./DefaultPreparationProfile";
 
 class SimpleProfile extends BenchProfile {
@@ -12,8 +12,9 @@ class SimpleProfile extends BenchProfile {
     }
 }
 
-const profile: Profile = {
+const profile: BuiltinProfile = {
     fileName: __filename,
+    name: "SimpleBenchProfile",
     benchProfile: SimpleProfile,
     preparationProfile: DefaultPreparationProfile
 };

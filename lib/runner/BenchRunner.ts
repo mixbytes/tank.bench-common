@@ -47,7 +47,7 @@ class BenchRunner {
 
 
         await new WorkersWrapper(
-            this.config.profile.fileName,
+            this.config.profileFileName,
             telemetry,
             this.logger,
             benchConfig,

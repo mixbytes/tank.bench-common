@@ -1,6 +1,6 @@
 import Profile from "../Profile";
 
-export default interface BuiltinProfile {
+export default interface BuiltinProfile extends Profile {
     name: string,
-    profile: Profile,
+    fileName: string
 }

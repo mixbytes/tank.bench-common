@@ -7,27 +7,7 @@ import SimpleProfileNoConfig from "./SimpleProfileNoConfig"
 
 export default class SimpleModule extends BlockchainModule {
     getBuiltinProfiles(): BuiltinProfile[] {
-        return [
-            {
-                profile: DefaultBenchProfile,
-                name: "default"
-            },
-
-            {
-                profile: SimpleBenchProfile,
-                name: "SimpleBenchProfile"
-            },
-
-            {
-                profile: SimpleProfileNoConfig,
-                name: "noConfig"
-            },
-
-            {
-                profile: ErrorBenchProfile,
-                name: "error"
-            },
-        ]
+        return [DefaultBenchProfile, SimpleBenchProfile, SimpleProfileNoConfig, ErrorBenchProfile];
     }
 
     getDefaultConfigFilePath(): string | null {
