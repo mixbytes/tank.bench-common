@@ -3,6 +3,7 @@ import Logger from "../resources/Logger";
 import BenchProfile, {TransactionResult} from "../module/steps/BenchProfile";
 import {WORKER_ERROR_DEFAULT, WORKER_STATE_ERROR, WORKER_STATE_PREPARED} from "./WorkersWrapper";
 import Profile from "../module/Profile";
+import {resolve} from "path";
 
 export default function getWorkerFilePath() {
     return __filename;
@@ -57,7 +58,8 @@ class Bench {
     }
 
     async startBench() {
-        let profileImport = require(this.profilePath);
+        // let profileImport = require(this.profilePath);
+        let profileImport = await import(resolve(this.profilePath));
         let profile: Profile;
         if (profileImport.default) {
             profile = <Profile>profileImport.default;
@@ -186,7 +188,7 @@ class Bench {
 }
 
 if (!isMainThread) {
-    parentPort!.on("message", msg => {
+    parentPort!.on("message", () => {
         new Bench().startBench()
             .then(() => {
                 parentPort!.postMessage({method: "onStopBenchmark", id: workerData.iThreadId});

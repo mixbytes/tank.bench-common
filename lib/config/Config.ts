@@ -2,7 +2,6 @@ import BlockchainModule from "../module/BlockchainModule";
 import Strings from "../resources/Strings";
 import * as convict from "convict";
 import Profile from "../module/Profile";
-import * as path from "path";
 import {resolve} from "path";
 import TelemetryProfile from "../module/steps/TelemetryProfile";
 import PreparationProfile from "../module/steps/PreparationProfile";
@@ -88,7 +87,7 @@ export default class Config {
                 profile.telemetryProfile = TelemetryProfile;
             }
 
-            return {profile, profileFileName: path.resolve(arg)};
+            return {profile, profileFileName: arg};
         }
 
         for (let i = 0; i < blockchainModule.getBuiltinProfiles().length; i++) {
