@@ -215,7 +215,7 @@ export default class WorkersWrapper {
             this.onMessage(worker, msg);
         });
 
-        worker.postMessage("");
+        worker.postMessage({method: "start"});
 
         this.workers.push(worker);
         this.terminatedWorkers.set(worker, false);

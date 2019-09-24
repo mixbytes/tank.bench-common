@@ -188,19 +188,20 @@ class Bench {
 }
 
 if (!isMainThread) {
-    parentPort!.on("message", () => {
-        new Bench().startBench()
-            .then(() => {
-                parentPort!.postMessage({method: "onStopBenchmark", id: workerData.iThreadId});
-            })
-            .catch(e => {
-                parentPort!.postMessage(
-                    {
-                        method: "onError",
-                        id: workerData.iThreadId,
-                        error: e ? (e.stack ? e.stack : e.toString()) : null
-                    }
-                );
-            });
+    parentPort!.on("message", (msg) => {
+        if (msg.method == "start")
+            new Bench().startBench()
+                .then(() => {
+                    parentPort!.postMessage({method: "onStopBenchmark", id: workerData.iThreadId});
+                })
+                .catch(e => {
+                    parentPort!.postMessage(
+                        {
+                            method: "onError",
+                            id: workerData.iThreadId,
+                            error: e ? (e.stack ? e.stack : e.toString()) : null
+                        }
+                    );
+                });
     });
 }
