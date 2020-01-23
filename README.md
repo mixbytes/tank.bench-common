@@ -1,233 +1,174 @@
-# tank.bench-common
+# Tank.bench-common
 
 [![npm version](https://badge.fury.io/js/tank.bench-common.svg)](https://www.npmjs.com/package/tank.bench-common)
 
-This is a part of [mixbytes.tank](https://github.com/mixbytes/tank) - the ultimate tool for testing blockchain performance
+This is a part of [MixBytes.Tank](https://github.com/mixbytes/tank) - 
+the ultimate tool for testing blockchain performance
 
 ## What is it?
 
-`tank.bench-common` is the repo that contains code that applies load to blockchain nodes.
+`Tank.bench-common` is used to apply load to blockchain nodes.
 
-It can prepare your blockchain for benchmark (create accounts, deploy tokens, etc.) and start applying load with
-specified tps (transactions per second), providing telemetry (using push-model). You also can specify such params as 
-threads amount (applies load using node's `worker_threads`).
+It provides developer-friendly interface to implement multithreaded
+code using js/ts libraries which can be used to
+test some blockchain nodes how they can handle highload.
+
+It is used inside the [MixBytes.Tank](https://github.com/mixbytes/tank)
+to apply load to deployed clusters.
+
 
 ## Requirements
 
-To use this package you need at least `node v12.5` because of using `worker-threads` feature to run the benchmark
+To use this package you need at least `node v12.5` because
+of using `worker-threads` feature to run the benchmark
 using multiple CPUs. 
 
-## If you are here for external profiles and tank.bench-profile-compiler
-
-If you are already common with the repository and you want to know much about the `external profiles`, you can 
-[directly go to the special section of this readme](#external-profiles)
-
-## How to install?
-
-This repo is a library, so you can use it as dependency of your blockchain implementation.
-You can use npm or yarn to install this package.
-
-```bash
-npm install tank.bench-common -S
-```
 
 ## How to use?
 
-You should use your own repo
-to write blockchain-specific code (for example, see [Haya implementation](https://github.com/mixbytes/tank.bench-haya) 
-or [PolkaDot implementation](https://github.com/mixbytes/tank.bench-polkadot)
+This project is designed to run `Tank.bench profiles`.
+Compiled `Tank.bench profile` is a js file with integrated dependencies that can be created using
+[tank.bench-profile-compiler](https://github.com/mixbytes/tank.bench-profile-compiler).
+`Tank.bench profile` contains blockchain-specific code.
 
-So, the first thing you should do in your module is to create class that extends `BlockchainModule` class.
+You can also run non-compiled profile using `Tank.bench profile`, so it will be compiled before 
+execution.
+ 
 
-In `getConfigSchema` method you should return schema of your configuration
-(using [node-convict](https://github.com/mozilla/node-convict) schema), so the configuration file of your module will
-be checked if it corresponds to this schema, otherwise the programm will throw error and stop.
+## Example of usage
 
-Implementing `getDefaultConfigFilePath` is optional; if you do it, you should return the default path to your module
-configuration file. Otherwise the `module.config.json` file will be used.
+First, you need to install `tank.bench-common` using npm install command.
 
+```shell script
+npm install tank.bench-common
+```
+
+Once installed, you should create 2 configuration files - `bench.config.json` and `module.config.json`.
+The first one specifies the behaviour of `Tank.bench-common`, and the second is used to configure
+the profile passed it. You can read about them below.
+
+After you created configuration files, you can use the `npx tank-bench`
+command to run your `Tank.bench profile`.
+
+```shell script
+npx tank-bench profile.js
+```
+
+Or, if you want to run non-compiled profile, specify path to the folder containing it:
+
+```shell script
+npx tank-bench path-to-profile-folder
+```
+
+The tank-bench executable can take additional arguments.
+You can read about them in [this](#command-line-arguments) section of this readme.
+
+
+## Creating profiles
+
+`Tank.bench profile`, before it gets compiled, is a node.js project,
+written with typescrypt. As any node.js project, it contains
+`package.json` file with all dependencies listed.
+
+The `Tank.bench profile` consists of at least one typescript file. This file should export the Profile 
+object. Profile object can be created using the special function, that takes an object with some amount of 
+functions, that specify the behaviour of load applied to blockchain nodes.
+
+You can find the boilerplate of profile [here](https://github.com/mixbytes/tank.bench-common/tree/master/test/profiles/Example.ts)
 
 ```typescript
-import {BlockchainModule, BuiltinProfile} from "tank.bench-common"
-
-export default class SimpleModule extends BlockchainModule {
-    getBuiltinProfiles(): BuiltinProfile[] {
-            return [DefaultBenchProfile, AwesomeBenchProfile];
-        }
-
-    getConfigSchema(): any {
-        return {
-            hello: {
-                type: "String",
-                default: name
-            }
-        }
+export const profile = Profile({
+    configSchema,
+    prepare,
+    constructBench,
+    destroyBench,
+    commitTransaction,
+    telemetry: {
+        constructTelemetry,
+        onBenchEnded,
+        onKeyPoint
     }
+});
 
-    getDefaultConfigFilePath(): string | null {
-        return "supermodule.bench.config.json";
-    }
-}
-```
-
-### What is profile?
-
-Profile is a set of classes, that are called the `parts` of profile. There are 3 parts of a profile - `preparation`,
-`telemetry` and `bench`. Bench is required part, other parts are optional. These parts are the classes that implement
-classes from `tank.bench-common` project.
-
-Profile specifies the code that will be run on concrete time and thread.
-
-Every class that is part of profile provide `asyncConstruct` method to implement. No methods will be called in
-your implementation before the promise you returned become resolved. This may be useful.
-
-If you want your class to be profile, you should export the `Profile` object containing it's metadata, like this:
-```typescript
-const profile: Profile = {
-    benchProfile: Bench,
-    preparationProfile: Preparation,
-    configSchema: {
-        url: {
-            arg: 'myBenchImpl.url',
-            format: String,
-            default: null,
-            doc: "Url to use with nodes"
-        },
-    }
-};
-export default profile;
-```
-#### Preparation
-
-The main goal of the `Preparation` part is to commit preparation transactions like accounts creation. To create the
-implementation of `Preparation` part you should create some class and inherit it from the `PreparationProfile` class.
-You can do the preparaion job in the `prepare` method, returning `Promise`. 
-The object returned from this promise will be used as config for the next step,
-the `BenchProfile`
-
-#### Telemetry
-
-`Telemetry` part contains code that will be called in some specific keypoint during benchmark. Every method takes 
-`telemetryData` as the argument. It is the structure containing information such as TPS and some other data.
-
-`onKeyPoint` method will be called when committed every N (N is gotten from `commonConfig`).
-
-`onBenchEnded` method will be called when the benchmark is ended successfully.
-
-This part can be used if you want to have your own telemetry (not using built-in `prometheus` one), or just to do
-logging stuff.
-
-### Bench
-
-`Bench` is a class that describes what load transactions to commit. 
-To create the
-implementation of `Bench` part you should create some class and inherit it from the `BenchProfile` class.
-It provides `commitTransaction` method, in which you
-can commit transactions. Important part of this step that it will be instantiated as many times as provided in config
-via `threadsAmount` parameter, each in it's own `worker_thread`. Also, you need too remember
-that the `commitTransaction` method can be called using multiple promises (subsequently).
-
-You should return Promise from `commitTransaction` method, and transaction will be counted as processed
-when you resolve this promise.
-In this promise you have to specify `responseCode` and `error (may be null)` to use telemetry correctly.
-
-### Builtin profiles
-
-The main goal of profiles is to be passed to benchmark via cli arguments to use this on special servers.
-But you can specify the builtin profiles that will be used if no profile parts files art provided as arguments.
-If you don't specify any cli argument for profile path, the builtin profile named `default` will be used (if such
-exists).
-
-The builtin profiles can be written only in the same project with the blockchain `module`. To add the profile
-to `module`, you have to export not `Profile` object, but the `BuiltinProfile` one.
-
-The `BuiltinProfile` is an extension of `Profile` object, that contains `name` and `fileName` field. 
-
-```typescript
-const profile: BuiltinProfile = {
-    name: "superProfile",
-    fileName: __filename,
-    benchProfile: Bench,
-    preparationProfile: Preparation,
-    configSchema: {
-        url: {
-            arg: 'myBenchImpl.url',
-            format: String,
-            default: null,
-            doc: "Url to use with nodes"
-        },
-    }
-};
-export default profile;
-```
-
-Using `name` field you specify the alias of your `BuiltinProfile`, so users can use the profile by passing the name
-as a flag to `npm start` command:
-
-```bash
-npm start -- -p=superProfile
-```
-
-### External profiles
-
-The bench is designed to be used as a part of some other software as [mixbytes.tank](https://github.com/mixbytes/tank).
-So in order to not rewrite the whole project of benchmark module, you can create the profile as external project.
-If you do this, you need to compile it with a special compiler, the
-[tank.bench-profile-compiler](https://github.com/mixbytes/tank.bench-profile-compiler). Please refer to it's 
-[documentation](https://github.com/mixbytes/tank.bench-profile-compiler) to know how it works.
-
-The external profile is a standalone node.js project, written with js or typescript. It must contain `package.json` with
-desired dependencies and entrypoint of your profile. 
-
-Before using the profile you should compile it. After it compiling with 
-[tank.bench-profile-compiler](https://github.com/mixbytes/tank.bench-profile-compiler) there will be created the
-`dist` folder with the `profile.js` file, that you have to pass to `module` using the flag:
-
-```bash
-npm start -- -p="profile/profile.js"
-```
-
-If you are using the [mixbytes.tank](https://github.com/mixbytes/tank), you can pass the compiled profile to
-your cluster like this:
-
-```bash
-tank cluster bench <run_id> profile/profile.js
 ```
 
 
-### How to run?
+### configSchema
+ConfigSchema is the configuration schema of your profile. The `module.config.json` file should respect that schema,
+otherwise there will be an error. `Tank.bench-common` uses [node-convict](https://github.com/mozilla/node-convict)
+to parse schema, configuration files and commandline arguments.
 
-After you implemented all required interfaces, to run the bench, just do the following thing:
+The configuration from file will be passed to the `prepare` function.
 
-```typescript
-new MyModule().bench().then(e => console.log(e));
+
+### prepare
+This function is called once in the main thread. Here you can make some preparation transactions,
+try your connection to the node, create network accounts etc.
+Anything you return from this function will be cloned to benchmark threads via the
+[structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)
+
+
+### constructBench
+This function is called once for every benchmark thread.
+Here you can initialize your connection to the blockchain to commit transactions later.
+Anything you return from this function will be passed to the commitTransaction function.
+For example, you can return the blockchain connection object
+
+
+### destroyBench
+This function is called once for every benchmark thread.
+after the last transaction is processed.
+Here you can destroy your connection to the blockchain
+
+
+### commitTransaction
+This function is called multiple times for every benchmark thread.
+Here you may send the transaction to the blockchain network.
+You should return the TransactionResult for the prometheus telemetry to run fine
+The uniqueData argument contains string that is unique among other threads and this function calls
+
+
+### Telemetry
+`Tank.bench-common` is able to push it's own telemetry to prometheus.
+But if you want, you can implement your own telemetry module.
+
+
+To do this, you should create 3 functions - one will be called when the telemetry
+is going to be constructed, one - when destroyed and one will be called every N seconds
+(specified via common config).
+
+
+## Command line arguments
+
+You should specify the profile to run using command line arguments. The profile should be the first argument or
+follow the `-p` flag. For example,
+
+```shell script
+npx tank-bench -p profile.js
 ```
 
-You can specify the name of internal profile you want to use, or the path of the compiled external profile.
-Like this:
+Also you can provide arguments to the program overriding default paths of configuration. The are `--commonconfig` 
+and `--moduleconfig` (and their short versions, `-cc` and `-mc`) if you do not want to use the `bench.config.json`
+or `module.config.json` files.
 
-```bash
-npm start -- -p=default
+```shell script
+npx tank-bench -p profile.js -mc mymodule.json
 ```
 
-### Configuration
+In this case the config for the profile will be gotten from the `mymodule.json` file.
 
-The implementation of `tank.bench-common` uses `2` different configuration files - one is for
-common code part, and the other - for blockchain-specific code part. The common one is specified by 
-this code repository, other one is configurable by overriding `getConfigSchema` method in `BlockchainModule` class.
+Also using the command line arguments you can override any arguments listed in configuration schema of profile
+or any argument of commonConfig.
 
-So, starting this app you should have 2 configuration files - containing two configs.
-By default, configuration of common code is being taken from `bench.config.json` file, and
-module config from `module.bench.config.json`. You can override this logic in your `BlockchainModule` class.
+```shell script
+npx tank-bench profile.js -common.tps 100
+```
 
-Also you can provide arguments to the programm overriding default paths of configuration. The are `--commonconfig` 
-and `--moduleconfig` (and their short versions, `-cc` and `-mc`).
+In this case the tps value will be overridden with the value of 100.
 
-For example, `npm start -- -p="./MyGreatProfile.js" -mc=mymodule.json` will get module config from `mymodule.json` file.
+### Common code configuration
 
-#### Common code configuration
-
-Here is the list of available configuration parameters:
+Here is the list of available configuration parameters of `Tank.bench-common`:
 
 * `logLevel` - the level of log. Can be 0,1,2,3. 0 - don't log anything, 3 - provide debug log.
 * `stopOn` - this section specifies the conditions when to stop benchmark.

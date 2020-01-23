@@ -1,45 +1,16 @@
-import SimpleModule from "./simple/SimpleModule";
+import {prepareAndBench} from "../lib";
 
-const testBench = async (cb: jest.DoneCallback) => {
-    jest.setTimeout(99999999);
-    await new SimpleModule().bench(false);
-    cb();
+const testBench = async (argv: string[]) => {
+    // 20 secs
+    jest.setTimeout(20_000);
+    process.argv = argv;
+
+    await prepareAndBench();
 };
 
-// test("Error internal test", async cb => {
-//     process.argv = ["-p=error"];
-//     await testBench(cb);
-// });
 
-test("Simple default internal test", async cb => {
-    process.argv = [];
-    await testBench(cb);
-});
-
-test("Simple common internal test", async cb => {
-    process.argv = ["-p=SimpleBenchProfile"];
-    await testBench(cb);
-});
-
-test("Simple internal test", async cb => {
-    process.argv = ["-p=SimpleBenchProfile"];
-    await testBench(cb);
-});
-
-test("Simple internal test (no config schema)", async cb => {
-    process.argv = ["-p=noConfig"];
-    await testBench(cb);
-});
-
-test("Simple external test", async cb => {
-    process.argv = ["-p=./test/simple/testCase/SimpleBenchProfileExt.js"];
-    await testBench(cb);
-});
-
-test("Simple error test", async cb => {
-    process.argv = ["-p=error"];
-    await testBench(cb).catch(() => {
-        cb();
+describe("Profiles", () => {
+    it("Example profile", async () => {
+        await testBench(["", "", "dist/test/profiles/Example.js"]);
     });
 });
-

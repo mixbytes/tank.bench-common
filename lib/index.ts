@@ -1,22 +1,30 @@
-import BlockchainModule from "./module/BlockchainModule";
-import Step from "./module/steps/Step";
-import PreparationProfile from "./module/steps/PreparationProfile";
-import BenchProfile, {TransactionResult} from "./module/steps/BenchProfile";
-import BuiltinProfile from "./module/steps/BuiltinProfile";
-import TelemetryProfile, {TelemetryData} from "./module/steps/TelemetryProfile";
 import Logger from "./resources/Logger";
-import Profile from "./module/Profile";
+import {
+    CommitTransactionArgs,
+    ConstructBenchArgs,
+    DestroyBenchArgs,
+    PrepareArgs,
+    Profile,
+    ProfileType,
+    Telemetry,
+    TelemetryData,
+    TransactionResult
+} from "./profile/Profile";
+import {prepareAndBench} from "./bench";
+import {bench} from "./worker/WorkersSpectator";
 
 // noinspection JSUnusedGlobalSymbols
 export {
-    BlockchainModule,
-    Step,
-    PreparationProfile,
-    BenchProfile,
-    BuiltinProfile,
-    TelemetryProfile,
     Logger,
     Profile,
+    CommitTransactionArgs,
+    ConstructBenchArgs,
+    PrepareArgs,
     TelemetryData,
-    TransactionResult
+    TransactionResult,
+    DestroyBenchArgs,
+    ProfileType,
+    Telemetry,
+    bench,
+    prepareAndBench
 }

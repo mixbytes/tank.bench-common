@@ -5,9 +5,11 @@
     "pretty": true,
     "sourceMap": true,
     "declaration": true,
+    "strictFunctionTypes": true,
     "target": "esnext",
     "strict": true,
     "outDir": "./dist",
+    "composite": true,
     "types": [
       "node",
       "convict",

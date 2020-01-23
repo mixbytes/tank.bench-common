@@ -1,7 +1,7 @@
 {
   "logLevel": 3,
   "stopOn": {
-    "error": "print",
+    "error": "stop",
     "processedTransactions": 300
   },
   "prometheusTelemetry": {
@@ -28,6 +28,6 @@
   },
   "telemetryStepInterval": 1000,
   "tps": 123.4,
-  "threadsAmount": 6,
+  "threadsAmount": 2,
   "maxActivePromises": 6
 }

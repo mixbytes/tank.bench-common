@@ -1,103 +1,109 @@
 import {isMainThread, parentPort, workerData} from "worker_threads";
-import Logger from "../resources/Logger";
-import BenchProfile, {TransactionResult} from "../module/steps/BenchProfile";
-import {WORKER_ERROR_DEFAULT, WORKER_STATE_ERROR, WORKER_STATE_PREPARED} from "./WorkersWrapper";
-import Profile from "../module/Profile";
-import {resolve} from "path";
+import {CommitTransactionArgs, DestroyBenchArgs, TransactionResult} from "..";
+import {SharedData} from "./WorkerWrapper";
+import {importProfile} from "../tools/Tools";
 
-export default function getWorkerFilePath() {
+export function getWorkerFilePath() {
     return __filename;
 }
 
 const sleep = (time: number) => {
     return new Promise(resolve => setTimeout(resolve, time));
+    // Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, time);
 };
 
 const SPEEDUP_ON_PROMISES_LIMIT_EXCEED = 4.0;
-const MAIN_THREAD_COMMUNICATION_DELAY = 50;
-// const SLEEP_COEF_LEARNING_FACTOR = 0.0024;
-// const SLEEP_COEF_LEARNING_MAX = 0.2;
 
-class Bench {
-    benchProfile!: BenchProfile;
-    benchRunning = false;
-    transactionsStarted = 0;
-    transactionsProcessed = 0;
-    benchStartTime = new Date().getTime();
+enum State {
+    INIT,
+    PREPARING,
+    PREPARED,
+    BENCH,
+    COMPLETED,
+    ERROR
+}
 
-    activePromises: number[] = [];
-    benchError: any;
-    sleepCoef = 1;
+const sharedData = workerData as SharedData;
 
-    readonly profilePath = workerData.profilePath;
+class BenchWorker {
+    private benchRunning = false;
+    private transactionsStarted = 0;
+    private transactionsProcessed = 0;
 
-    readonly iThreadId = workerData.iThreadId;
+    private state: State = State.INIT;
 
-    readonly sharedAvgTpsBuffer = workerData.sharedAvgTpsBuffer;
-    readonly sharedAvgTpsArray = new Int32Array(this.sharedAvgTpsBuffer);
+    private readonly activePromises: number[] = [];
+    private benchError: any;
 
-    readonly sharedTransProcessedBuffer = workerData.sharedTransProcessedBuffer;
-    readonly sharedTransProcessedArray = new Int32Array(this.sharedTransProcessedBuffer);
+    private benchConstructResult: any;
+    private commitTransaction?: ({uniqueData, threadId, benchConfig, constructData}: CommitTransactionArgs<Promise<any>, Promise<any>>) => Promise<TransactionResult>;
+    private destroyBench?: ({threadId, benchConfig, constructData}: DestroyBenchArgs<Promise<any>, Promise<any>>) => Promise<any>;
 
-    readonly benchConfig = workerData.benchConfig;
-    readonly commonConfig = workerData.commonConfig;
+    private readonly profilePath = sharedData.profilePath;
 
-    readonly targetTransactionTime = 1000.0 / this.commonConfig.tps;
-    readonly targetThreadTransactionTime = this.targetTransactionTime * this.commonConfig.threadsAmount;
+    private readonly iThreadId = sharedData.iThreadId;
+
+    private readonly sharedTransProcessedBuffer = sharedData.sharedTransProcessedBuffer;
+    private readonly sharedTransProcessedArray = new Uint32Array(this.sharedTransProcessedBuffer);
+
+    private readonly benchConfig = sharedData.benchConfig;
+    private readonly commonConfig = sharedData.commonConfig;
+
+    private readonly targetTransactionTime = 1000.0 / this.commonConfig.tps;
+    private readonly targetThreadTransactionTime = this.targetTransactionTime * this.commonConfig.threadsAmount;
 
     constructor() {
         parentPort!.on("message", msg => {
-            if (msg.method === "stopBenchmark") {
-                this.benchRunning = false;
-            } else {
-                throw new Error("Unknown method");
+            switch (msg.method) {
+                case "prepare":
+                    this.state = State.PREPARING;
+                    this.prepareToBench().then(() => {
+                        this.state = State.PREPARED;
+                        parentPort!.postMessage({method: "workerPrepared"});
+                    }).catch(e => {
+                        this.state = State.ERROR;
+                        parentPort!.postMessage({method: "onError", error: e.stack ? e.stack : e.toString()});
+                    });
+                    return;
+                case "startBenchmark":
+                    this.state = State.BENCH;
+                    this.startBench().then(() => {
+                        this.state = State.COMPLETED;
+                        parentPort!.postMessage({method: "benchFinished"});
+                    }).catch(e => {
+                        this.state = State.ERROR;
+                        parentPort!.postMessage({method: "onError", error: e.stack ? e.stack : e.toString()});
+                    });
+                    return;
+                default:
+                    throw new Error("Unknown method");
             }
         });
-
         this.activePromises = new Array(this.commonConfig.maxActivePromises).fill(0);
     }
 
+    async prepareToBench() {
+        const profile = await importProfile(this.profilePath);
+        this.benchConstructResult = await profile.constructBench({
+            threadId: this.iThreadId,
+            benchConfig: this.benchConfig
+        });
+        this.commitTransaction = profile.commitTransaction;
+        this.destroyBench = profile.destroyBench;
+    }
+
     async startBench() {
-        // let profileImport = require(this.profilePath);
-        let profileImport = await import(resolve(this.profilePath));
-        let profile: Profile;
-        if (profileImport.default) {
-            profile = <Profile>profileImport.default;
-        } else {
-            profile = <Profile>profileImport;
-        }
-
-        this.benchProfile = new profile.benchProfile(this.benchConfig, new Logger(this.commonConfig));
-
-        await this.benchProfile.asyncConstruct(this.iThreadId, this.benchConfig);
-
-        Atomics.store(this.sharedTransProcessedArray, this.iThreadId, WORKER_STATE_PREPARED);
-
-        parentPort!.postMessage({method: "onReady", id: this.iThreadId});
-
-        // Atomics.wait(this.sharedTransProcessedArray, this.iThreadId, WORKER_STATE_START);
-
-        for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-            Atomics.wait(this.sharedTransProcessedArray, this.iThreadId, WORKER_STATE_PREPARED);
-        }
-
-        for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
-            if (Atomics.load(this.sharedTransProcessedArray, i) === WORKER_STATE_ERROR)
-                return;
-        }
-
         this.benchRunning = true;
-        this.benchStartTime = new Date().getTime();
-
-        setInterval(() => {
-            Atomics.store(this.sharedAvgTpsArray, this.iThreadId, this.workerAvgTps());
-        }, MAIN_THREAD_COMMUNICATION_DELAY);
 
         // To not start all threads in one time
         await sleep(this.targetTransactionTime * (this.iThreadId));
-        await this.transactionsPushLoop();
 
-        await this.benchProfile.asyncDestroy(this.iThreadId, this.benchConfig);
+        await this.transactionsPushLoop();
+        await this.destroyBench!({
+            threadId: this.iThreadId,
+            benchConfig: this.benchConfig,
+            constructData: this.benchConstructResult
+        });
     }
 
     private async commitBenchTransaction(idInPromisesArray: number) {
@@ -110,10 +116,17 @@ class Bench {
 
         let trRes: TransactionResult;
         try {
-            trRes = await this.benchProfile.commitTransaction(key, this.iThreadId, this.benchConfig);
+            trRes = await this.commitTransaction!({
+                uniqueData: key,
+                threadId: this.iThreadId,
+                benchConfig: this.benchConfig,
+                constructData: this.benchConstructResult
+            });
         } catch (e) {
-            trRes = {code: WORKER_ERROR_DEFAULT, error: e};
+            trRes = {code: -1, error: e};
         }
+
+        this.activePromises[idInPromisesArray] = 0;
 
         if (trRes.error) {
             if (this.commonConfig.stopOn.error === "print")
@@ -122,8 +135,6 @@ class Bench {
                 this.benchRunning = false;
                 this.benchError = trRes.error;
             }
-            Atomics.store(this.sharedAvgTpsArray, this.iThreadId, this.workerAvgTps());
-            this.activePromises[idInPromisesArray] = 0;
             return;
         }
 
@@ -132,7 +143,6 @@ class Bench {
         const trDuration = trEndTime - trStartTime;
 
         Atomics.store(this.sharedTransProcessedArray, this.iThreadId, this.transactionsProcessed);
-        Atomics.store(this.sharedAvgTpsArray, this.iThreadId, this.workerAvgTps());
 
         parentPort!.postMessage({
             method: "onTransaction",
@@ -140,32 +150,27 @@ class Bench {
             respCode: trRes.code,
             trDuration
         });
-
-        this.activePromises[idInPromisesArray] = 0;
     }
 
-    private workerAvgTps() {
-        return this.transactionsProcessed / (new Date().getTime() - this.benchStartTime) * 100_000_000.0;
-    }
 
     private async tplSleep(speedUp = false) {
-        // TODO: check if this code is suitable on real data
-        // let tpsDiff = this.workerAvgTps() / 100_000.0 - this.commonConfig.tps / this.commonConfig.threadsAmount;
-        //
-        // if (Math.abs(tpsDiff) > SLEEP_COEF_LEARNING_MAX) {
-        //     if (tpsDiff > 0)
-        //         tpsDiff = SLEEP_COEF_LEARNING_MAX;
-        //     else
-        //         tpsDiff = -SLEEP_COEF_LEARNING_MAX
-        // }
-        //
-        // this.sleepCoef += tpsDiff * SLEEP_COEF_LEARNING_FACTOR;
-
-        let tts = this.targetThreadTransactionTime * this.sleepCoef;
+        let tts = this.targetThreadTransactionTime;
         if (speedUp)
             await sleep(tts / SPEEDUP_ON_PROMISES_LIMIT_EXCEED);
         else
             await sleep(tts);
+    }
+
+    private needToStop() {
+        if (this.commonConfig.stopOn.processedTransactions > 0) {
+            let processedTransactionsTotal = 0;
+            for (let i = 0; i < this.commonConfig.threadsAmount; i++) {
+                processedTransactionsTotal += Atomics.load(this.sharedTransProcessedArray, i);
+            }
+            if (processedTransactionsTotal >= this.commonConfig.stopOn.processedTransactions)
+                return true;
+        }
+        return false;
     }
 
     private async transactionsPushLoop() {
@@ -180,6 +185,9 @@ class Bench {
             this.commitBenchTransaction(freePromisePlace);
 
             await this.tplSleep(false);
+
+            if (this.needToStop())
+                this.benchRunning = false;
         }
         if (this.benchError) {
             throw this.benchError;
@@ -189,19 +197,9 @@ class Bench {
 
 if (!isMainThread) {
     parentPort!.on("message", (msg) => {
-        if (msg.method == "start")
-            new Bench().startBench()
-                .then(() => {
-                    parentPort!.postMessage({method: "onStopBenchmark", id: workerData.iThreadId});
-                })
-                .catch(e => {
-                    parentPort!.postMessage(
-                        {
-                            method: "onError",
-                            id: workerData.iThreadId,
-                            error: e ? (e.stack ? e.stack : e.toString()) : null
-                        }
-                    );
-                });
+        if (msg.method === "waitForCreation") {
+            new BenchWorker();
+            parentPort!.postMessage({method: "workerCreated"});
+        }
     });
 }

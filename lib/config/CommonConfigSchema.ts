@@ -1,21 +1,23 @@
-export default {
+import * as convict from "convict";
+
+export const schema = {
     logLevel: {
         arg: 'common.log.level',
         format: "int",
-        default: null,
+        default: 0,
         doc: "the level of the log. 0 - only errors, 3 - full log"
     },
     stopOn: {
         error: {
             arg: 'common.stopOn.error',
             format: ["stop", "print", "no"],
-            default: null,
-            doc: "weather to stop benchmark on blockchain errors or not. Available values - (\"block\", \"fetch\", \"no\")"
+            default: "no",
+            doc: "weather to stop benchmark on blockchain errors or not. Available values - (\"stop\", \"print\", \"no\")"
         },
         processedTransactions: {
             arg: 'common.stopOn.processedTransactions',
             format: "int",
-            default: null,
+            default: -1,
             doc: "Stop if achieved this amount of transactions. WARNING: some additional transactions may be processed."
         }
     },
@@ -29,7 +31,7 @@ export default {
         enable: {
             arg: 'prometheusTelemetry.enable',
             format: Boolean,
-            default: null,
+            default: false,
             doc: "weather to send telemetry to promethus gateway or not"
         },
         url: {
@@ -81,25 +83,25 @@ export default {
     telemetryStepInterval: {
         arg: 'common.dataStepInterval',
         format: Number,
-        default: null,
+        default: 1000,
         doc: "call onKeyPoint every N milliseconds"
     },
     tps: {
         arg: 'common.tps',
         format: Number,
-        default: null,
+        default: -1,
         doc: "desired transactions per second"
     },
     threadsAmount: {
         arg: 'common.threadsAmount',
         format: "int",
-        default: null,
+        default: -1,
         doc: "amount of threads to perform transfer transactions"
     },
     maxActivePromises: {
         arg: 'common.maxActivePromises',
         format: "int",
-        default: null,
+        default: -1,
         doc: "amount of threads to perform transfer transactions"
     },
     sharding: {
@@ -117,3 +119,7 @@ export default {
         }
     }
 };
+
+type AntiConvict<T> = T extends convict.Schema<infer N> ? N : T;
+
+export type CommonConfig = AntiConvict<typeof schema>
