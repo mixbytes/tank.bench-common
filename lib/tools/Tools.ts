@@ -1,5 +1,5 @@
 import {resolve} from "path";
-import {AnyProfileType} from "../profile/Profile";
+import {AnyProfileType} from "tank.bench-profile";
 
 export const processArg = (argVariants: string[]): string | null => {
     const args = process.argv;

@@ -6,7 +6,7 @@ import {
     Profile,
     TelemetryData,
     TransactionResult
-} from "../../lib";
+} from "tank.bench-profile";
 
 
 // Here is an example module configuration schema

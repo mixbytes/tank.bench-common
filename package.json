@@ -1,6 +1,6 @@
 {
   "name": "tank.bench-common",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "description": "The tool to run tank.bench profiles",
   "license": "Apache-2.0",
   "repository": {
@@ -22,24 +22,27 @@
     "dist/lib/"
   ],
   "scripts": {
+    "start": "node dist/lib/cli",
     "clean": "rm -rf dist",
     "build": "tsc",
-    "test": "npm run clean && npm run build && jest",
+    "compileTestProfiles": "bpc test/profiles/example",
+    "test": "npm run clean && npm run build && npm run compileTestProfiles && jest",
     "prepublishOnly": "npm run test"
   },
   "dependencies": {
     "@types/convict": "4.2.1",
-    "@types/node": "12.7.3",
-    "convict": "5.1.0",
+    "@types/node": "13.5.0",
+    "convict": "5.2.0",
     "prom-client": "11.5.3",
-    "tank.bench-profile-compiler": "2.3.0"
+    "tank.bench-profile-compiler": "2.3.1",
+    "tank.bench-profile": "1.0.1"
   },
   "devDependencies": {
-    "@types/jest": "24.0.18",
-    "jest": "24.9.0",
+    "@types/jest": "25.1.0",
+    "jest": "25.1.0",
     "source-map-support": "^0.5.16",
-    "ts-jest": "24.0.2",
+    "ts-jest": "25.0.0",
     "ts-node-dev": "^1.0.0-pre.44",
-    "typescript": "3.6.2"
+    "typescript": "3.7.5"
   }
 }

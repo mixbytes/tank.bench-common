@@ -1,6 +1,6 @@
 import {ClientRequestArgs} from "http";
 import {Counter, Gauge, Histogram, Pushgateway} from "prom-client";
-import {CommonConfig} from "../config/CommonConfigSchema";
+import {CommonConfig} from "tank.bench-profile";
 
 const client = require("prom-client");
 

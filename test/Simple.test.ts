@@ -10,7 +10,10 @@ const testBench = async (argv: string[]) => {
 
 
 describe("Profiles", () => {
-    it("Example profile", async () => {
-        await testBench(["", "", "dist/test/profiles/Example.js"]);
+    it("Example profile (project)", async () => {
+        await testBench(["", "", "test/profiles/example"]);
+    });
+    it("Example profile (file)", async () => {
+        await testBench(["", "", "test/profiles/example/dist/profile.js"]);
     });
 });

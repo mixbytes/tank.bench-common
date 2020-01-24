@@ -1,9 +1,8 @@
-import {TelemetryData} from "..";
+import {CommonConfig, TelemetryData} from "tank.bench-profile";
 import ProfileConfig from "../config/ProfileConfig";
 import Logger from "../resources/Logger";
 import {Strings} from "../resources/Strings";
 import PrometheusPusher from "../metrics/PrometheusPusher";
-import {CommonConfig} from "../config/CommonConfigSchema";
 import {WorkerWrapper} from "./WorkerWrapper";
 import {importProfile} from "../tools/Tools";
 

@@ -1,5 +1,5 @@
 import {isMainThread, parentPort, workerData} from "worker_threads";
-import {CommitTransactionArgs, DestroyBenchArgs, TransactionResult} from "..";
+import {CommitTransactionArgs, DestroyBenchArgs, TransactionResult} from "tank.bench-profile";
 import {SharedData} from "./WorkerWrapper";
 import {importProfile} from "../tools/Tools";
 

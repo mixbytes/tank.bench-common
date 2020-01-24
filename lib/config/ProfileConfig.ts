@@ -1,5 +1,4 @@
-import {AnyProfileType} from "../profile/Profile";
-import {CommonConfig, schema} from "./CommonConfigSchema";
+import {AnyProfileType, CommonConfig, CommonConfigSchema} from "tank.bench-profile";
 import {Strings} from "../resources/Strings";
 import {processArg} from "../tools/Tools";
 import convict = require("convict");
@@ -24,7 +23,7 @@ export default class ProfileConfig {
         const moduleFilePath = moduleArg ? moduleArg : Strings.constants.moduleConfigFilePath();
 
         return new ProfileConfig(
-            this.loadConfig(schema, commonFilePath, "common"),
+            this.loadConfig(CommonConfigSchema, commonFilePath, "common"),
             this.loadConfig(profile.configSchema, moduleFilePath, "profile"),
         );
     }

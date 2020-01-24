@@ -1,6 +1,6 @@
 import {Worker} from "worker_threads";
 import {getWorkerFilePath} from "./BenchWorker";
-import {CommonConfig} from "../config/CommonConfigSchema";
+import {CommonConfig} from "tank.bench-profile";
 
 
 export type SharedData = {
