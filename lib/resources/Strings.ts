@@ -14,7 +14,7 @@ export const Strings = {
             ["-cc", "--common-config"],
 
         moduleConfigFilePathArgs: () =>
-            ["-mc", "--profile-config"],
+            ["-mc", "--module-config", "--profile-config"],
 
         benchProfileFilePathArgs: () =>
             ["-case", "-p", "--profile"],

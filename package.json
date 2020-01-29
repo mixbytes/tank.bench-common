@@ -1,6 +1,6 @@
 {
   "name": "tank.bench-common",
-  "version": "5.1.1",
+  "version": "5.1.2",
   "description": "The tool to run tank.bench profiles",
   "license": "Apache-2.0",
   "repository": {
