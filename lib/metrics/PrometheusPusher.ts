@@ -1,12 +1,13 @@
 import {ClientRequestArgs} from "http";
 import {Counter, Gauge, Histogram, Pushgateway} from "prom-client";
+import {CommonConfig} from "tank.bench-profile";
 
 const client = require("prom-client");
 
 const PUSHES_INTERVAL = 500;
 
 export default class PrometheusPusher {
-    private readonly commonConfig: any;
+    private readonly commonConfig: CommonConfig;
     private readonly pushGateway: Pushgateway;
 
     private readonly trxs: Counter;
@@ -14,7 +15,7 @@ export default class PrometheusPusher {
     private readonly responseCodes: Histogram;
     private readonly trxsDurations: Histogram;
 
-    constructor(commonConfig: any) {
+    constructor(commonConfig: CommonConfig) {
         this.commonConfig = commonConfig;
         const config = this.commonConfig.prometheusTelemetry;
 
@@ -68,14 +69,25 @@ export default class PrometheusPusher {
     }
 
     start() {
-        setInterval(() => {
-            this.forcePush();
+        setTimeout(() => {
+            this.forcePush().then(() => {
+                this.start();
+            }).catch(() => {
+                // Try again
+                this.start();
+            });
         }, PUSHES_INTERVAL);
     }
 
-    forcePush() {
-        this.pushGateway.push({jobName: 'bench-load'}, () => {
-        });
+    async forcePush() {
+        return new Promise((resolve, reject) => {
+            this.pushGateway.push({jobName: 'bench-load'}, (error?: Error) => {
+                if (error)
+                    reject(error);
+                else
+                    resolve();
+            });
+        })
     }
 
     addProcessedTransactions(trxs: number) {

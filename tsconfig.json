@@ -5,9 +5,11 @@
     "pretty": true,
     "sourceMap": true,
     "declaration": true,
+    "strictFunctionTypes": true,
     "target": "esnext",
     "strict": true,
     "outDir": "./dist",
+    "composite": true,
     "types": [
       "node",
       "convict",
@@ -19,6 +21,7 @@
     "test/**/*.ts"
   ],
   "exclude": [
+    "test/profiles",
     "node_modules",
     "dist/lib",
     "dist/test"
