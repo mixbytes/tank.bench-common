@@ -1,45 +1,44 @@
-import SimpleModule from "./simple/SimpleModule";
+import {spawn} from "child_process";
 
-const testBench = async (cb: jest.DoneCallback) => {
-    jest.setTimeout(99999999);
-    await new SimpleModule().bench(false);
-    cb();
-};
 
-// test("Error internal test", async cb => {
-//     process.argv = ["-p=error"];
-//     await testBench(cb);
-// });
+const asyncExec = (command: string, args: string[]) => new Promise<number>((resolve, reject) => {
+    const argv = [...args, "testmc", "config/module.config.json", "testcc", "config/bench.config.json"];
+    const ls = spawn(command, argv);
 
-test("Simple default internal test", async cb => {
-    process.argv = [];
-    await testBench(cb);
-});
+    ls.stdout.on('data', (data) => {
+        console.log(data.toString());
+    });
 
-test("Simple common internal test", async cb => {
-    process.argv = ["-p=SimpleBenchProfile"];
-    await testBench(cb);
-});
+    ls.stderr.on('data', (data) => {
+        console.error(data.toString());
+    });
 
-test("Simple internal test", async cb => {
-    process.argv = ["-p=SimpleBenchProfile"];
-    await testBench(cb);
-});
-
-test("Simple internal test (no config schema)", async cb => {
-    process.argv = ["-p=noConfig"];
-    await testBench(cb);
-});
-
-test("Simple external test", async cb => {
-    process.argv = ["-p=./test/simple/testCase/SimpleBenchProfileExt.js"];
-    await testBench(cb);
-});
-
-test("Simple error test", async cb => {
-    process.argv = ["-p=error"];
-    await testBench(cb).catch(() => {
-        cb();
+    ls.on('close', (code) => {
+        if (code === 0)
+            resolve(code);
+        else
+            reject(code);
     });
 });
 
+
+const testBench = async (argv: string[]) => {
+    // 20 secs
+    jest.setTimeout(20_000);
+    process.argv = argv;
+
+    await asyncExec("npm", ["run", "start", ...argv]);
+};
+
+
+describe("Profiles", () => {
+    it("Example profile (project/dir)", async () => {
+        await testBench(["test/profiles/example"]);
+    });
+    it("Example profile (project/file)", async () => {
+        await testBench(["test/profiles/example/Example.ts"]);
+    });
+    it("Example profile (compiled)", async () => {
+        await testBench(["test/profiles/example/dist/profile.js"]);
+    });
+});

@@ -1,0 +1,13 @@
+{
+  "name": "test-profile",
+  "version": "1.0.0",
+  "description": "",
+  "main": "Example.ts",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "tank-bench ."
+  },
+  "dependencies": {
+    "tank.bench-profile": "1.0.2"
+  }
+}

@@ -1,4 +1,4 @@
-const Strings = {
+export const Strings = {
     log: {
 
         preparingTelemetry: () =>
@@ -7,31 +7,19 @@ const Strings = {
         preparingTelemetrySuccess: () =>
             `Checking prometheus pushgateway endpoint success!`,
 
-        preparingToBenchmark: () =>
-            `Preparing to benchmark...`,
-
-        startingBenchmarkThreads: () =>
-            `Preparation completed, starting benchmark threads...`,
-
-        startingBenchmark: (threads: number) =>
-            `Starting benchmark (${threads} threads)...`,
-
-        proceededNTransactions: (n: number) =>
-            `Proceeded ${n} transations...`,
-
-        benchmarkFinished: () =>
-            `Benchmark finished!`
     },
 
     constants: {
+        debugArg: () => "--debug",
+
         commonConfigFilePathArgs: () =>
-            ["-cc=", "--common-config="],
+            ["-cc", "--common-config", "testcc"],
 
         moduleConfigFilePathArgs: () =>
-            ["-mc=", "--module-config="],
+            ["-mc", "--module-config", "--profile-config", "testmc"],
 
         benchProfileFilePathArgs: () =>
-            ["-case=", "-p=", "--profile="],
+            ["-case", "-p", "--profile"],
 
         commonConfigFilePath: () =>
             `./bench.config.json`,
@@ -41,5 +29,3 @@ const Strings = {
 
     }
 };
-
-export default Strings;
