@@ -37,7 +37,7 @@ export function getProfileTSConfig() {
     let tsConfig = path.resolve(profileFile.profileDir, "tsconfig.json");
 
     if (!fs.existsSync(tsConfig)) {
-        tsConfig = path.resolve(__dirname, "../../../node_modules/tank.bench-profile-compiler/tsconfig.json");
+        tsConfig = require.resolve("tank.bench-profile-compiler/tsconfig.json");
     }
 
     return tsConfig;
