@@ -32,7 +32,7 @@
   "dependencies": {
     "@types/convict": "4.2.1",
     "@types/node": "13.7.1",
-    "convict": "5.2.0",
+    "convict": "6.2.2",
     "prom-client": "11.5.3",
     "tank.bench-profile": "1.0.2",
     "tank.bench-profile-compiler": "2.3.3",
